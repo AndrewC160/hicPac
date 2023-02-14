@@ -1,0 +1,317 @@
+---
+title: "HiC data functions"
+author: "Andrew Clugston"
+date: "8/7/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(ggplot2)
+library(clugPac)
+library(ascFunctions)
+library(GenomicRanges)
+library(hicPac)
+library(tictoc)
+library(rhdf5)
+library(data.table)
+library(magrittr)
+library(cowplot)
+library(scales)
+library(knitr)
+library(kableExtra)
+
+knitr::opts_chunk$set(echo = FALSE,fig.height = 8,fig.width = 10,warning = FALSE,message=FALSE)
+
+dirs  <- list(base="/N/u/aclugston/projects/hicPac")
+dirs$cool <- file.path("/N/u/aclugston/projects/hic/hic1/data")
+dirs$data <- file.path(dirs$base,"data")
+dirs$tabs <- file.path(dirs$base,"tables")
+dirs$figs <- file.path(dirs$base,"figs")
+
+filter  <- dplyr::filter
+arrange <- dplyr::arrange
+select  <- dplyr::select
+rename  <- dplyr::rename
+```
+
+```{r loadData}
+seq_szs <- get_seqsizes(as_granges = TRUE)
+tb_fls  <- tibble(cool=Sys.glob(file.path(dirs$cool,"*/matrix/*.cool"))) %>%
+  mutate(sample = str_extract(basename(cool),"^[^_]+") %>% factor,
+         res = str_match(basename(cool),"([^_]+)\\.cool$")[,2],
+         mult = ifelse(grepl("MB",res),1e6,1e3),
+         num = str_extract(res,"[:digit:]+") %>% as.integer) %>%
+  mutate(bin_size = mult*num) %>%
+  arrange(desc(bin_size)) %>%
+  mutate(res = factor(res,levels=select(.,res) %>% unlist %>% unique)) %>%
+  select(sample,res,bin_size,cool) %>%
+  arrange(sample,res)
+```
+
+# HiC data files
+
+HiC data files are stored in Cooler format from the [cooler](https://github.com/open2c/cooler) package. 
+
+```
+Abdennur, N., and Mirny, L. (2019). Cooler: scalable storage for Hi-C data and other genomically labeled arrays. Bioinformatics. doi: [10.1093/bioinformatics/btz540](https://doi.org/10.1093/bioinformatics/btz540).
+```
+
+## Accessor/plotting functions are loaded in the `hicPac` package.
+### dump_cooler
+
+The dump cooler function wraps the cooler script function, which is used to retrive pixels (bin values) in a given rectangle within the genome:
+
+`cooler dump -t pixels -r chr10:10,000,000-20,000,000 -r2 chr10:30,000,000-80,000,000 --header --join --matrix data/test.cool`
+
+This function appears to either return the entire genome (no -r specified) *or* a contiguous region within a single genome.
+
+### read_cooler_hdf5
+
+Since Cooler loads data into HDF5 format, I have opted to use the R package [rhdf5](https://www.bioconductor.org/packages/devel/bioc/vignettes/rhdf5/inst/doc/rhdf5.html) to open and access these files *from disk* rather than by loading into memory. HDF5 files are similar to a self-contained file system, so I wrote the function `read_cooler_hdf5()` to perform the following steps:
+
+1) Load the file as a *connection* (don't read it into memory).
+2) Extract bin ids and coordinates.
+3) Determine which bins are of interest based on the genomic range in `gr_range1`, if any. 
+4) Fetch index information.
+5) Use index to fetch relevant rows within the pixels table.
+6) Filter out unneeded bins based on `gr_range2`, if provided (by default, `gr_range2` is set equal to `gr_range1`).
+    + *Note: This filtering step is not index-assisted; `gr_range2` filters are applied in memory.*
+7) Close the connection to the HDF5 file and return the pixels table.
+
+This is considerably faster than using a system call to `cooler dump`, and has the added benefit of being native to R. However, at very small bin sizes the resources in terms of memory and time increase exponentially. As such, the function includes a `max_pixels` argument which stops with an error message if the number of pixels about to be retrieved is greater than the limit (6.25 million currently, which is equivalent to a 2,500 x 2,500 matrix). This can be changed by increasing the value of `max_pixels`. The plots below illustrate the resources used to load chromosome 8 at different bin resolutions.
+
+**Update 25OCT22** The `file_cool` argument can now be a list of multiple files, and if so `read_cooler_hdf5` is run recursively on each and tables are combined using `rbind`. Cache results are not saved for each table but in one table at the end: this is more organized, but keep in mind when retrieving lots of pixels from several files that you may have a long wait, and if there is any instability you are more likely to end up with a crash...Best to use this sparingly.
+
+**Update 27OCT22** read_cooler_hdf5 now also includes a "diag_dist" argument to filter pixels based on their distance from the diagonal. This is intended for use when plotting pyramid tracks, but keep in mind that the filter is applied *after* fetching pixel data: it will not speed up retrieval to filter this way as pixels must be read into memory and *then* removed. 
+
+```{r pixelLoadTimes,fig.height=6,fig.width=10,echo=FALSE}
+fl_pix_timing <- file.path(dirs$tabs,"pixel_load_times_all.tsv")
+if(file.exists(fl_pix_timing)){
+  tb_log  <- fread(fl_pix_timing,sep="\t",header=TRUE) %>%
+    as_tibble %>%
+    mutate(res = factor(res,levels=levels(tb_fls$res)))
+}else{
+  tic.clearlog()
+  tic();pxls1  <- read_cooler_hdf5(seq_szs[8],silent = TRUE,max_pixels = Inf,file_cool = tb_fls$cool[1]);toc(log=TRUE,quiet=TRUE)
+  tic();pxls2  <- read_cooler_hdf5(seq_szs[8],silent = TRUE,max_pixels = Inf,file_cool = tb_fls$cool[2]);toc(log=TRUE,quiet=TRUE)
+  tic();pxls3  <- read_cooler_hdf5(seq_szs[8],silent = TRUE,max_pixels = Inf,file_cool = tb_fls$cool[3]);toc(log=TRUE,quiet=TRUE)
+  tic();pxls4  <- read_cooler_hdf5(seq_szs[8],silent = TRUE,max_pixels = Inf,file_cool = tb_fls$cool[4]);toc(log=TRUE,quiet=TRUE)
+  tic();pxls5  <- read_cooler_hdf5(seq_szs[8],silent = TRUE,max_pixels = Inf,file_cool = tb_fls$cool[5]);toc(log=TRUE,quiet=TRUE)
+  tic();pxls6  <- read_cooler_hdf5(seq_szs[8],silent = TRUE,max_pixels = Inf,file_cool = tb_fls$cool[6]);toc(log=TRUE,quiet=TRUE)
+  v_log <- tic.log(format=TRUE)
+  
+  tb_log<- 
+    tibble(cool = tb_fls$cool[1:6],
+         time = unlist(v_log),
+         size = c(object.size(pxls1),
+                  object.size(pxls2),
+                  object.size(pxls3),
+                  object.size(pxls4),
+                  object.size(pxls5),
+                  object.size(pxls6))) %>%
+    left_join(tb_fls,by="cool") %>%
+    rowwise %>%
+    mutate(size_lab = utils:::format.object_size(size,units = "auto"),
+           time_sec = str_extract(time,"[[:digit:]\\.]+") %>% as.double) %>%
+    mutate(bins = ceiling(width(seq_szs[8]) / bin_size),
+           pix_lab = bins ^ 2,
+           pix_lab = ifelse(pix_lab > 1e6, paste0(comma(pix_lab/1e6,accuracy = 1),"M"),comma(pix_lab))) %T>%
+      fwrite(file = fl_pix_timing,quote = FALSE,row.names = FALSE,col.names = TRUE,sep="\t")
+}
+
+p_mem <- ggplot(tb_log,aes(x=bin_size,y=size,group=sample,label=size_lab)) +
+    scale_x_reverse() +
+    scale_y_log10(name = "Memory footprint (MB)",labels = function(x) x/1e6,expand=expansion(mult=c(0.1,0.2))) +
+    geom_line() +
+    geom_point() +
+    geom_text(hjust=1,vjust=0) +
+    theme_minimal() +
+    ggtitle("Resources for fetching and storing pixels for Chr8 by bin size") +
+    theme(axis.text.x = element_blank(),
+          axis.line.x.top = element_line(size=0.5,color="black"),
+          axis.ticks.x.top = element_line(size=0.25,color="black"),
+          axis.title.x = element_blank(),
+          panel.grid.major.x = element_blank(),
+          panel.grid.minor.x = element_blank(),
+          panel.border = element_rect(size=0.5,color="black",fill=NA),
+          plot.title = element_text(size=10),
+          plot.margin = unit(c(0,0,0,0),"lines"),
+          plot.background = element_rect(fill="white",color=NA))
+p_pix <-   
+  ggplot(tb_log,aes(x=bin_size,y=bins^2,group=sample,
+                    label = paste0(pix_lab," "))) +
+    scale_x_reverse() +
+    scale_y_log10(name = "Pixels (bins^2)",
+                  expand=expansion(mult=c(0.1,0.2)),
+                  labels = function(x) ifelse(x >= 1e6,
+                                              paste0(x/1e6,"M"),
+                                              paste0(x/1e3,"k"))) +
+    geom_line() +
+    geom_point() +
+    geom_text(hjust=1,vjust=0) +
+    geom_hline(yintercept = 6.25e6,color="red",alpha=0.3) +
+    annotate(geom="text",x=1e7,y=7.25e6,label="6.25 million pixel cutoff",hjust=0,vjust=0,color="red",alpha=0.6) +
+    theme_minimal() +
+    theme(axis.text.x = element_blank(),
+          axis.line.x.top = element_line(size=0.5,color="black"),
+          axis.ticks.x.top = element_line(size=0.25,color="black"),
+          axis.title.x = element_blank(),
+          panel.border = element_rect(size=0.5,color="black",fill=NA),
+          panel.grid.major.x = element_blank(),
+          panel.grid.minor.x = element_blank(),
+          plot.margin = unit(c(0,0,0,0),"lines"),
+          plot.background = element_rect(fill="white",color=NA))
+
+p_time  <-
+  ggplot(tb_log,aes(x=bin_size,y=time_sec,group=sample)) +
+    scale_x_reverse(name = "Bin size",labels=tb_log$res[1:4],breaks = c(1e7,5e6,1e6,1e5)) +
+    scale_y_continuous(name = "Time",
+                       labels=function(x) ifelse(x < 60, paste(x,"sec."),paste(round(x/60,digits=1),"min.")),
+                       breaks=c(0,0.5,1,seq(2,8,by=2)) * 60) +
+    geom_line() +
+    geom_point() +
+    geom_text(data=subset(tb_log,bin_size < 100000),mapping=aes(label=paste0(as.character(res),"b ")),hjust=0,vjust=1) +
+    theme_minimal() +
+    theme(axis.text.x = element_text(angle=45,hjust=1,vjust=1),
+          axis.ticks.x = element_line(size=0.25,color="black"),
+          panel.border = element_rect(size=0.5,color="black",fill=NA),
+          panel.grid.major.x = element_blank(),
+          panel.grid.minor.x = element_blank(),
+          panel.grid.minor.y = element_blank(),
+          plot.margin = unit(c(0,0,0,0),"lines"),
+          plot.background = element_rect(fill="white",color=NA))
+
+plot_grid(p_mem,p_pix,p_time,ncol=1,align = "v",axis = "lr")
+ggsave(file.path(dirs$figs,"read_cooler_hdf5_resources.png"),height = 6,width = 6,dpi=300,device = "png")
+```
+
+#### Output format
+
+Values of "1" and "2" represent bins 1 and 2, which are considered as the X and Y axis coordinates, generally, though this is arbitrary given matrix symmetry. Best practices are to use the "upper triangle" approach, i.e. bin2 is greater than or equal to bin1. `start_adj` and `end_adj` coordinates are adjusted to an end-to-end chromosome arrangement, while `start` and `end` coordinates are actual genomic coordinates. Weight columns are determined by `cooler`'s balancing function, and the `balanced` score is equal to multiplying counts by `weight1` and `weight2` for a given bin. `log10_count` is the log10 of the raw count number.
+```{r, echo=TRUE}
+pxls  <- read_cooler_hdf5(gr_range1 = seq_szs[8],silent = TRUE,max_pixels = Inf,file_cool = tb_fls$cool[1])
+```
+```{r echo=FALSE}
+pxls %>%
+  mutate_at(c("weight1","weight2"),function(x) formatC(x,digits = 2,format = "e")) %>%
+  trunc_tibble(n_row=5,n_col=100,row_suffix = " bins total") %>%
+  kable %>% 
+  kable_styling(full_width=TRUE)
+```
+
+# plot_hic_matrix {.tabset}
+
+General function for quick regional plots, using the same arguments as `read_cooler_hdf5`
+
+#### Full genome, 5MB bins
+```{r, echo = TRUE,fig.height=6,fig.width=7}
+plot_hic_matrix(file_cool = tb_fls$cool[2],)
+```
+
+#### Chromosome 1, 2.5MB bins
+```{r,  echo = TRUE,fig.height=6,fig.width=7}
+plot_hic_matrix(gr_1=seq_szs[1],file_cool = tb_fls$cool[3])
+```
+
+#### Interactions between chromosomes 1 and 4, 2.5 MB bins.
+```{r,  echo = TRUE,fig.height=6,fig.width=7}
+plot_hic_matrix(gr_1=seq_szs[1],gr_2=seq_szs[4],file_cool = tb_fls$cool[3])
+```
+
+# plot_hic_pyramids
+
+"Pyramid" plots represent HiC data as tracks similar to CHiP seq (etc.) using the diagonal as the X-axis. To make these compatible with GGPlot2, a function `rotate_pix_45()` is included. This function performs a few steps on a given pixel tibble:
+
+1) Determines the resolution/calculates the diagonal of each pixel (i.e., if sides are bin size "b", the diagonal is sqrt(2b^2)).
+2) Determines the center point of each pixel.
+3) Uses trigonometry to rotate each pixel center by 45 degrees (See [this discussion](https://stackoverflow.com/questions/41127054/rotate-a-matrix-45-degrees-and-visualize-it-using-ggplot) for my inspiration). 
+4) Groups pixels by x and y coordinates and adds a `pix_id` column.
+5) Calculates four sets of (x,y) coordinates for each pixel, one for each corner (top, right, bottom, left). Stores these in columns `x_coords` and `y_coords`.
+6) Un-nests x/y coordinates such that every pixel now has four rows, one for each corner and all other values duplicated.
+7) Scales the resulting X and Y axes to match the original X axis range (the diagonal is longer than the sides, so the X axis expands after rotation).
+
+These tables are 4x longer since each pixel needs to be represented as four points instead of one row with four columns, but plotting is now possible using GGplot2 parlance, i.e.:
+
+```
+ggplot(pixel_tb, aes(x=x_coords,y=y_coords,fill=log10_count_wgs_nrm,group=pix_id)) +
+  geom_polygon()
+```
+
+A stepwise example:
+
+#### Step 1
+
+Get HiC coolers of interest, read into a pixel tibble with a 2.5MB diagonal (y-axis):
+```{r plotPyramidStep1,echo=TRUE}
+gr_win<- GRanges("chr8",IRanges(8000000,28000000))
+tb_pix<- hic_file_table(gr_in = gr_win) %>%
+  filter(res == "50k") %>%
+  vectify(hic,sample) %>%
+  read_cooler_hdf5(gr_range1 = gr_win,
+                   silent=FALSE,
+                   diag_distance = 2.5E6,
+                   cache_tsv = file.path(dirs$tabs,"bin_agreement_chr8_50kb_hic_combined.tsv"),
+                   overwrite_cache = F)
+```
+
+
+#### Step 2
+
+Use `rot_pix_45()` to determine the rotated coordinates for each pixel.
+
+Note the X-axis is expanded since `diag_distance` was specified in `read_cooler_hdf5()` (original window is shown with red lines; the range description in the x-axis title does not match the actual axis values). This expansion is to ensure that pixels in the upper left and right corners of the track are included (i.e., points which fall in range based on their coordinates in Y axis).
+```{r }
+pyr_theme <- 
+  theme(panel.grid = element_blank(),
+        panel.background = element_rect(size=0.5,fill="black",color=NA),
+        panel.border = element_rect(size=0.5,color="black",fill=NA),
+        panel.spacing.y = unit(0,"lines"),
+        strip.background = element_blank(),
+        axis.text.y = element_blank(),
+        axis.ticks.y = element_blank(),
+        axis.title.y = element_blank())
+```
+```{r plotPyramidStep2,echo=TRUE,fig.height=5,fig.width=10}
+tb_rot  <- rotate_pix_45(df_in = tb_pix)
+x_brks  <- hicPac::get_axis_labs(tb_rot)
+
+gr_bounds <- c(start(gr_win),end(gr_win)) + get_seqsizes_adj()[8]
+ggplot(tb_rot,aes(x=x_coords,y=y_coords,group = pix_id,fill=log10_count_wgs_nrm)) +
+  facet_wrap(.~cooler,ncol=1,strip.position = "right",scales="fixed") +
+  scale_x_continuous(name = grange_desc(gr_win),expand=c(0,0),breaks=x_brks,labels=names(x_brks)) +
+  scale_y_continuous(expand=c(0,0)) +
+  geom_polygon() +
+  geom_vline(xintercept = gr_bounds,color="red",size=0.5) +
+  pyr_theme
+```
+
+#### Step 3
+
+Use `trim_rot45()` to smooth "jagged" edges on the top/bottom/side of edge pixels, and to trim pixels not found on the original x-axis.
+```{r plotPyramidStep3,echo=TRUE,fig.height=5,fig.width=10}
+tb_rot2 <- trim_rot45(tb_in = tb_rot,gr_x = gr_win)
+x_brks  <- hicPac::get_axis_labs(tb_rot2)
+
+ggplot(tb_rot2,aes(x=x_coords,y=y_coords,group = pix_id,fill=log10_count_wgs_nrm)) +
+  facet_wrap(.~cooler,ncol=1,strip.position = "right",scales="fixed") +
+  scale_x_continuous(name = grange_desc(gr_win),expand=c(0,0),labels=names(x_brks),breaks=x_brks) +
+  scale_y_continuous(expand=c(0,0)) +
+  geom_polygon() +
+  pyr_theme
+```
+
+#### `read_cooler_hdf5_rot45()`
+
+For convenience, these have been wrapped in the function `read_cooler_hdf5_rot45()`, which simply performs these steps in series:
+```
+tb_rot2 <- hic_file_table(gr_in = gr_win) %>%
+  filter(res == "50k") %>%
+  vectify(hic,sample) %>%
+  read_cooler_hdf5_rot45(
+    gr_range1 = gr_win,
+    silent=FALSE,
+    diag_distance = 2.5E6,
+    cache_tsv = file.path(dirs$tabs,"bin_agreement_chr8_50kb_hic_combined.tsv"),
+    overwrite_cache = F)
+```
