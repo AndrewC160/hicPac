@@ -16,5 +16,8 @@ read_cooler_bins_hdf5(file_cooler, granges_list = NULL, ignore_strand = FALSE)
 \description{
 Given a cooler file, retrieve genomic bin coordinates and return as a
 GRanges object. Does not open file continually, but requires that there not
-be an existing connection to another HDF5 based on rhdf5 requirements.
+be an existing connection to another HDF5 based on rhdf5 requirements. If
+strand of input GRanges is negative, this is assumed to mean that said
+region is in the reverse direction, and so the bin's strand value will be
+matched.
 }

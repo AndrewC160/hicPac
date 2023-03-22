@@ -22,6 +22,11 @@
 #' pixels, so it is not an effective way to increase retrieval speeds. It is
 #' however reflected in cached TSV files, so it will reduce file sizes.
 #'
+#' In some cases, it is preferable to produce the TSV cache file and NOT load
+#' its contents into memory. In these cases, <return_table> can be set to FALSE
+#' and the pixel TSV file will be returned; in the event this file exists it
+#' will not be read into memory.
+#'
 #' @param file_cool Name of .cool file(s) with the appropriate bin size. If multiple files are provided, functions is run recursively and tables are combined (including cache TSV).
 #' @param gr_range1 GRange of contiguous region for X dimension. Defaults to entire genome, and must be contiguous.
 #' @param gr_range2 GRange of contiguous region for Y dimension. Defaults to values of gr_range1.
@@ -30,6 +35,7 @@
 #' @param max_pixels Maximum number of pixels to retrieve without erroring out. Defaults to 6.25 million (2500x2500 grid), can also be set to Inf to disregard.
 #' @param cache_table Filename of TSV to cache pixel results into. If provided and this file exists, this table will be read and returned. If not found, it will be created.
 #' @param overwrite_cache Should cache file be overwritten? Defaults to FALSE.
+#' @param return_table Should the table be returned? Defaults to TRUE, but if the goal is to produce the TSV cache file this option can avoid extra reading and memory requirements. Requries a cache_tsv file, if FALSE.
 #'
 #' @import tidyr
 #' @import dplyr
@@ -45,22 +51,27 @@
 #'
 #' @export
 
-read_cooler_hdf5  <- function(file_cool,gr_range1=NULL,gr_range2=NULL,diag_distance=NULL,silent=TRUE,max_pixels=6.25e6,cache_tsv=NULL,overwrite_cache = FALSE){
+read_cooler_hdf5  <- function(file_cool,gr_range1=NULL,gr_range2=NULL,diag_distance=NULL,silent=TRUE,max_pixels=6.25e6,cache_tsv=NULL,overwrite_cache = FALSE,return_table=TRUE){
   mutate  <- dplyr::mutate
   arrange <- dplyr::arrange
   filter  <- dplyr::filter
   rename  <- dplyr::rename
 
   if(!silent) tic()
+  if(!return_table & is.null(cache_tsv)) stop("If a table isn't goint to be returned (return_table), a cache file must be included.")
   pixels  <- NULL
   if(!is.null(cache_tsv)){
     if(file.exists(cache_tsv) & !overwrite_cache){
       #Note: MAKE SURE fread doesn't do anything with integer64, some of the math starts to chug in R. 'integer64="numeric"' ensures
       # that large integers are turned into doubles instead.
-      pixels  <- fread(cache_tsv,sep="\t",header=TRUE,integer64 = "numeric") %>%
-        as_tibble %>%
-        mutate_at(c("seqnames1","seqnames2"), function(x) factor(x,levels=paste0('chr',c(1:22,"X","Y"))))
-      if(!silent) message("Read ",prettyNum(nrow(pixels),big.mark=",")," cached pixels from ",cache_tsv,"...")
+      if(return_table){
+        pixels  <- fread(cache_tsv,sep="\t",header=TRUE,integer64 = "numeric") %>%
+          as_tibble %>%
+          mutate_at(c("seqnames1","seqnames2"), function(x) factor(x,levels=paste0('chr',c(1:22,"X","Y"))))
+        if(!silent) message("Read ",prettyNum(nrow(pixels),big.mark=",")," cached pixels from ",cache_tsv,"...")
+      }else{
+        pixels  <- cache_tsv
+      }
     }
   }
 
@@ -180,5 +191,9 @@ read_cooler_hdf5  <- function(file_cool,gr_range1=NULL,gr_range2=NULL,diag_dista
   }
 
   if(!silent) toc()
+  if(!return_table){
+    rm(pixels)
+    pixels <- cache_tsv
+  }
   return(pixels)
 }

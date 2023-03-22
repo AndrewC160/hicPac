@@ -16,7 +16,7 @@
 #' @param gr_2 GRange region for Y-axis. Defaults to value of gr_1.
 #' @param file_cool Cool file to plot.
 #' @param tb_pixel Tibble formatted from call to read_cooler_hdf5(), can include additional columns but must have basics.
-#' @param kary_width Width of karyogram in fraction of plot height/width; defaults to 0.25 (2.5% of the total plot height and width are added as a karyogram).
+#' @param kary_width Width of karyogram in fraction of plot height/width; defaults to 0.25 (2.5\% of the total plot height and width are added as a karyogram).
 #' @param max_pixel_count Maximum number of pixels to plot, i.e. max_pixels argument for read_cooler_hdf5.
 #' @param silent Boolean, defaults to FALSE. Should the function suppress messages about fetching / processing time for read_cooler_hdf5()?
 #' @param score_col Column in pixels tibble to plot within the heatmap, defaults to "log10_count".

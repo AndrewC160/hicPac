@@ -33,7 +33,7 @@ plot_hic_matrix_to_file(
 
 \item{tb_pixel}{Tibble formatted from call to read_cooler_hdf5(), can include additional columns but must have basics.}
 
-\item{kary_width}{Width of karyogram in fraction of plot height/width; defaults to 0.25 (2.5% of the total plot height and width are added as a karyogram).}
+\item{kary_width}{Width of karyogram in fraction of plot height/width; defaults to 0.25 (2.5\% of the total plot height and width are added as a karyogram).}
 
 \item{max_pixel_count}{Maximum number of pixels to plot, i.e. max_pixels argument for read_cooler_hdf5.}
 

@@ -12,7 +12,8 @@ read_cooler_hdf5(
   silent = TRUE,
   max_pixels = 6250000,
   cache_tsv = NULL,
-  overwrite_cache = FALSE
+  overwrite_cache = FALSE,
+  return_table = TRUE
 )
 }
 \arguments{
@@ -27,6 +28,8 @@ read_cooler_hdf5(
 \item{max_pixels}{Maximum number of pixels to retrieve without erroring out. Defaults to 6.25 million (2500x2500 grid), can also be set to Inf to disregard.}
 
 \item{overwrite_cache}{Should cache file be overwritten? Defaults to FALSE.}
+
+\item{return_table}{Should the table be returned? Defaults to TRUE, but if the goal is to produce the TSV cache file this option can avoid extra reading and memory requirements. Requries a cache_tsv file, if FALSE.}
 
 \item{diag_distace}{Maximum distance from the diagonal (useful for filtering pixels from tables meant for rotated plots). Filter is applied AFTER fetching pixels, so does not generally help performance.}
 
@@ -52,4 +55,9 @@ pixels on the left and right edges which have gr_range2 values within range,
 but not gr_range1. The diagonal distance filter is applied AFTER fetching
 pixels, so it is not an effective way to increase retrieval speeds. It is
 however reflected in cached TSV files, so it will reduce file sizes.
+
+In some cases, it is preferable to produce the TSV cache file and NOT load
+its contents into memory. In these cases, <return_table> can be set to FALSE
+and the pixel TSV file will be returned; in the event this file exists it
+will not be read into memory.
 }

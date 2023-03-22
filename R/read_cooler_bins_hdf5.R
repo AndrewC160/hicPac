@@ -33,7 +33,7 @@ read_cooler_bins_hdf5 <- function(file_cooler,granges_list = NULL,ignore_strand=
 
   if(!is.null(granges_list)){
     if(is.null(names(granges_list))){
-      names(granges_list) <- paste0("region_",c(1:length(granges_list)))
+      names(granges_list) <- paste0("reg",c(1:length(granges_list)))
     }
     gr_bins <- lapply(names(granges_list), function(nm){
       gr  <- granges_list[[nm]]
