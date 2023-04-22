@@ -4,7 +4,12 @@
 \alias{read_cooler_bins_hdf5}
 \title{Read cooler genomic bins}
 \usage{
-read_cooler_bins_hdf5(file_cooler, granges_list = NULL, ignore_strand = FALSE)
+read_cooler_bins_hdf5(
+  file_cooler,
+  granges_list = NULL,
+  ignore_strand = FALSE,
+  disable_file_lock = FALSE
+)
 }
 \arguments{
 \item{file_cooler}{Cooler file from which to retrive bin information.}
@@ -12,6 +17,8 @@ read_cooler_bins_hdf5(file_cooler, granges_list = NULL, ignore_strand = FALSE)
 \item{granges_list}{Genomic ranges to be incorporated. If one or more is provided, bins will be retrieved for each, plus an additional arbitrary bin ID.}
 
 \item{ignore_strand}{Should strand orientation be ignored among input granges?}
+
+\item{disable_file_lock}{Should the locking of HDF5 files be disabled? Defaults to FALSE, but can be set to TRUE if multiple instances will be accessing the same Cooler simultaneously.}
 }
 \description{
 Given a cooler file, retrieve genomic bin coordinates and return as a

@@ -9,7 +9,7 @@ get_axis_labs(pix_in, axis_in = "x", break_num = 5, out_as_vector = TRUE)
 \arguments{
 \item{pix_in}{Matrix tibble in the format returned by read_matrix_file().}
 
-\item{axis_in}{Which axis to return labels for. Defaults to "x", can also be "y".}
+\item{axis_in}{Which axis to return labels for. Defaults to "x", can also be "y". For distance in a rotated matrix, use "y_hic".}
 
 \item{break_num}{Number of breaks to approximate. All chromosome starts must be annotated, however, so if there are more chromosomes than <break_num> it will be effectively ignored.}
 

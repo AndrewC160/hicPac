@@ -11,7 +11,7 @@
 #' Typical format: "Chr1 | 1,234,567 | 106,434,567 | Chr2 | 1,234,567"
 #'
 #' @param pix_in Matrix tibble in the format returned by read_matrix_file().
-#' @param axis_in Which axis to return labels for. Defaults to "x", can also be "y".
+#' @param axis_in Which axis to return labels for. Defaults to "x", can also be "y". For distance in a rotated matrix, use "y_hic".
 #' @param break_num Number of breaks to approximate. All chromosome starts must be annotated, however, so if there are more chromosomes than <break_num> it will be effectively ignored.
 #' @param out_as_vector Should the output table be simplified down to a named vector with the offset start positions as values? Defaults to true.
 #'

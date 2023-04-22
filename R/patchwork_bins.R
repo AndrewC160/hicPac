@@ -12,6 +12,7 @@
 #' @param gr_list List of GRanges to combine.
 #' @param hic_file Cooler filename from which to retrieve bins.
 #' @param boundaries_only Defaults to TRUE, in which case only bins which bound each segment are retrived. If FALSE, all bins are retrieved.
+#' @param disable_file_lock Should the locking of HDF5 files be disabled? Defaults to FALSE, but can be set to TRUE if multiple instances will be accessing the same Cooler simultaneously.
 #'
 #' @import dplyr
 #' @import tidyr
@@ -20,7 +21,7 @@
 #'
 #' @export
 
-patchwork_bins    <- function(gr_list,hic_file,boundaries_only=TRUE){
+patchwork_bins    <- function(gr_list,hic_file,boundaries_only=TRUE,disable_file_lock=FALSE){
   filter  <- dplyr::filter
   rename  <- dplyr::rename
   mutate  <- dplyr::mutate
@@ -31,7 +32,7 @@ patchwork_bins    <- function(gr_list,hic_file,boundaries_only=TRUE){
     gr_list$region <- paste0("reg",c(1:length(gr_list)))
     gr_list <- split(gr_list,gr_list$region)
   }
-  tb_bins <- read_cooler_bins_hdf5(file_cooler = hic_file,granges_list = gr_list) %>% as_tibble
+  tb_bins <- read_cooler_bins_hdf5(file_cooler = hic_file,granges_list = gr_list,disable_file_lock=disable_file_lock) %>% as_tibble
   bin_ids <- lapply(tb_bins$bin_alt,function(x){
     tibble(binx = x,biny=tb_bins$bin_alt)
   }) %>%

@@ -23,6 +23,7 @@
 #' @param pixel_tsv TSV file in which to cache output. If <over_write> is FALSE and <pixel_tsv> exists, this file will be read from disk instead of retrieving from the Cooler file.
 #' @param over_write Should existing <pixel_tsv> file be overwritten? Defaults to FALSE.
 #' @param max_pixels Maximum number of pixels to retrieve for a given segment, defaults to 6.25E6. Can be increased to Inf.
+#' @param disable_file_lock Should the locking of HDF5 files be disabled? Defaults to FALSE, but can be set to TRUE if multiple instances will be accessing the same Cooler simultaneously.
 #'
 #' @import dplyr
 #' @import tidyr
@@ -32,7 +33,7 @@
 #'
 #' @export
 
-patchwork_matrix  <- function(gr_list,hic_file,pixel_tsv,over_write=FALSE,max_pixels = 6.25E6){
+patchwork_matrix  <- function(gr_list,hic_file,pixel_tsv,over_write=FALSE,max_pixels = 6.25E6,disable_file_lock=FALSE){
   filter  <- dplyr::filter
   rename  <- dplyr::rename
   mutate  <- dplyr::mutate
@@ -83,7 +84,8 @@ patchwork_matrix  <- function(gr_list,hic_file,pixel_tsv,over_write=FALSE,max_pi
                                     gr_range1 = grA,
                                     gr_range2 = grB,
                                     max_pixels = max_pixels,
-                                    return_table=FALSE)
+                                    return_table=FALSE,
+                                    disable_file_lock=disable_file_lock)
     }
     tb_pix <- lapply(names(ls_pix), function(nm) {
       fread(ls_pix[[nm]],header=TRUE) %>%

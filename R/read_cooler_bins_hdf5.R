@@ -12,6 +12,8 @@
 #' @param file_cooler Cooler file from which to retrive bin information.
 #' @param granges_list Genomic ranges to be incorporated. If one or more is provided, bins will be retrieved for each, plus an additional arbitrary bin ID.
 #' @param ignore_strand Should strand orientation be ignored among input granges?
+#' @param disable_file_lock Should the locking of HDF5 files be disabled? Defaults to FALSE, but can be set to TRUE if multiple instances will be accessing the same Cooler simultaneously.
+#'
 #'
 #' @import rhdf5
 #' @import dplyr
@@ -22,8 +24,9 @@
 #'
 #' @export
 
-read_cooler_bins_hdf5 <- function(file_cooler,granges_list = NULL,ignore_strand=FALSE){
+read_cooler_bins_hdf5 <- function(file_cooler,granges_list = NULL,ignore_strand=FALSE,disable_file_lock=FALSE){
   sq_offs <- get_seqsizes_adj()
+  if(disable_file_lock) h5disableFileLocking()
   gr_bins <- h5read(file_cooler,name="bins",bit64conversion="double") %>%
     as_tibble %>%
     mutate(bin_id = as.integer(row_number()-1),

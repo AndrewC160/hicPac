@@ -9,7 +9,8 @@ patchwork_matrix(
   hic_file,
   pixel_tsv,
   over_write = FALSE,
-  max_pixels = 6250000
+  max_pixels = 6250000,
+  disable_file_lock = FALSE
 )
 }
 \arguments{
@@ -22,6 +23,8 @@ patchwork_matrix(
 \item{over_write}{Should existing <pixel_tsv> file be overwritten? Defaults to FALSE.}
 
 \item{max_pixels}{Maximum number of pixels to retrieve for a given segment, defaults to 6.25E6. Can be increased to Inf.}
+
+\item{disable_file_lock}{Should the locking of HDF5 files be disabled? Defaults to FALSE, but can be set to TRUE if multiple instances will be accessing the same Cooler simultaneously.}
 }
 \description{
 Retrive bins and pixels of HiC data corresponding to a contig assembled from

@@ -4,7 +4,12 @@
 \alias{patchwork_bins}
 \title{Patchwork bins}
 \usage{
-patchwork_bins(gr_list, hic_file, boundaries_only = TRUE)
+patchwork_bins(
+  gr_list,
+  hic_file,
+  boundaries_only = TRUE,
+  disable_file_lock = FALSE
+)
 }
 \arguments{
 \item{gr_list}{List of GRanges to combine.}
@@ -12,6 +17,8 @@ patchwork_bins(gr_list, hic_file, boundaries_only = TRUE)
 \item{hic_file}{Cooler filename from which to retrieve bins.}
 
 \item{boundaries_only}{Defaults to TRUE, in which case only bins which bound each segment are retrived. If FALSE, all bins are retrieved.}
+
+\item{disable_file_lock}{Should the locking of HDF5 files be disabled? Defaults to FALSE, but can be set to TRUE if multiple instances will be accessing the same Cooler simultaneously.}
 }
 \description{
 Get bins and coordinates for a given contig of DNA starting with a list of

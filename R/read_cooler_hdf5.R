@@ -35,7 +35,8 @@
 #' @param max_pixels Maximum number of pixels to retrieve without erroring out. Defaults to 6.25 million (2500x2500 grid), can also be set to Inf to disregard.
 #' @param cache_table Filename of TSV to cache pixel results into. If provided and this file exists, this table will be read and returned. If not found, it will be created.
 #' @param overwrite_cache Should cache file be overwritten? Defaults to FALSE.
-#' @param return_table Should the table be returned? Defaults to TRUE, but if the goal is to produce the TSV cache file this option can avoid extra reading and memory requirements. Requries a cache_tsv file, if FALSE.
+#' @param return_table Should the table be returned? Defaults to TRUE, but if the goal is to produce the TSV cache file this option can avoid extra reading and memory requirements. Requires a cache_tsv file, if FALSE.
+#' @param disable_file_lock Should the locking of HDF5 files be disabled? Defaults to FALSE, but can be set to TRUE if multiple instances will be accessing the same Cooler simultaneously.
 #'
 #' @import tidyr
 #' @import dplyr
@@ -51,7 +52,7 @@
 #'
 #' @export
 
-read_cooler_hdf5  <- function(file_cool,gr_range1=NULL,gr_range2=NULL,diag_distance=NULL,silent=TRUE,max_pixels=6.25e6,cache_tsv=NULL,overwrite_cache = FALSE,return_table=TRUE){
+read_cooler_hdf5  <- function(file_cool,gr_range1=NULL,gr_range2=NULL,diag_distance=NULL,silent=TRUE,max_pixels=6.25e6,cache_tsv=NULL,overwrite_cache = FALSE,return_table=TRUE,disable_file_lock=FALSE){
   mutate  <- dplyr::mutate
   arrange <- dplyr::arrange
   filter  <- dplyr::filter
@@ -80,6 +81,8 @@ read_cooler_hdf5  <- function(file_cool,gr_range1=NULL,gr_range2=NULL,diag_dista
       if(is.null(names(file_cool))){
         names(file_cool)  <- basename(file_cool)
       }
+      if(disable_file_lock) h5disableFileLocking() #Disable file lock.
+
       pixels  <- lapply(names(file_cool),function(fl_nm) {
         pxls  <- read_cooler_hdf5(file_cool = file_cool[fl_nm],
                                   gr_range1=gr_range1,

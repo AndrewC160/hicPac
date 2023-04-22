@@ -13,7 +13,8 @@ read_cooler_hdf5(
   max_pixels = 6250000,
   cache_tsv = NULL,
   overwrite_cache = FALSE,
-  return_table = TRUE
+  return_table = TRUE,
+  disable_file_lock = FALSE
 )
 }
 \arguments{
@@ -29,7 +30,9 @@ read_cooler_hdf5(
 
 \item{overwrite_cache}{Should cache file be overwritten? Defaults to FALSE.}
 
-\item{return_table}{Should the table be returned? Defaults to TRUE, but if the goal is to produce the TSV cache file this option can avoid extra reading and memory requirements. Requries a cache_tsv file, if FALSE.}
+\item{return_table}{Should the table be returned? Defaults to TRUE, but if the goal is to produce the TSV cache file this option can avoid extra reading and memory requirements. Requires a cache_tsv file, if FALSE.}
+
+\item{disable_file_lock}{Should the locking of HDF5 files be disabled? Defaults to FALSE, but can be set to TRUE if multiple instances will be accessing the same Cooler simultaneously.}
 
 \item{diag_distace}{Maximum distance from the diagonal (useful for filtering pixels from tables meant for rotated plots). Filter is applied AFTER fetching pixels, so does not generally help performance.}
 
