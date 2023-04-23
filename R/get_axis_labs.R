@@ -51,7 +51,7 @@ get_axis_labs <- function(pix_in,axis_in = "x",break_num = 5,out_as_vector=TRUE)
     seq_num   <- length(unique(mtx_out$seqnames))
 
     if(seq_num > break_num){
-      lab_mtx <- mtx_out %>%
+      brks_out<- mtx_out %>%
         group_by(seqnames) %>%
         summarize(start = 1,
                   start_adj = min(start_adj),
