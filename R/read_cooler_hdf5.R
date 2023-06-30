@@ -43,6 +43,7 @@
 #' @import tibble
 #' @import data.table
 #' @import GenomicRanges
+#' @import IRanges
 #' @import magrittr
 #' @import tictoc
 #' @import clugPac
@@ -63,7 +64,7 @@ read_cooler_hdf5  <- function(file_cool,gr_range1=NULL,gr_range2=NULL,diag_dista
   pixels  <- NULL
   if(!is.null(cache_tsv)){
     if(file.exists(cache_tsv) & !overwrite_cache){
-      #Note: MAKE SURE fread doesn't do anything with integer64, some of the math starts to chug in R. 'integer64="numeric"' ensures
+      # Note: MAKE SURE fread doesn't do anything with integer64, some of the math starts to chug in R. 'integer64="numeric"' ensures
       # that large integers are turned into doubles instead.
       if(return_table){
         pixels  <- fread(cache_tsv,sep="\t",header=TRUE,integer64 = "numeric") %>%
@@ -81,7 +82,7 @@ read_cooler_hdf5  <- function(file_cool,gr_range1=NULL,gr_range2=NULL,diag_dista
       if(is.null(names(file_cool))){
         names(file_cool)  <- basename(file_cool)
       }
-      if(disable_file_lock) h5disableFileLocking() #Disable file lock.
+      if(disable_file_lock) h5disableFileLocking()
 
       pixels  <- lapply(names(file_cool),function(fl_nm) {
         pxls  <- read_cooler_hdf5(file_cool = file_cool[fl_nm],
@@ -97,10 +98,10 @@ read_cooler_hdf5  <- function(file_cool,gr_range1=NULL,gr_range2=NULL,diag_dista
     }
   }
   if(is.null(pixels)){
-    #Fetch bin data.
+    # Fetch bin data.
     gr_bins   <- read_cooler_bins_hdf5(file_cool)
 
-    #Subset relevant bins.
+    # Subset relevant bins.
     if(is.null(gr_range1)){
       xbins   <- gr_bins$bin_id
       ybins   <- gr_bins$bin_id
@@ -113,7 +114,7 @@ read_cooler_hdf5  <- function(file_cool,gr_range1=NULL,gr_range2=NULL,diag_dista
         gr1   <- gr_range1
         diag_distance <- Inf
       }
-      #NOTE: Add one bin to the end of the x-bins list otherwise last row will happen at the start of the last block.
+      # NOTE: Add one bin to the end of the x-bins list otherwise last row will happen at the start of the last bin.
       xbins<- subsetByOverlaps(gr_bins,gr1)$bin_id
       xbins<- c(xbins,max(xbins+1))
       if(is.null(gr_range2)){
@@ -124,7 +125,7 @@ read_cooler_hdf5  <- function(file_cool,gr_range1=NULL,gr_range2=NULL,diag_dista
       }
     }
 
-    #Determine how many pixels are about to be gathered, stop if there are too many.
+    # Determine how many pixels are about to be gathered, stop if there are too many.
     pix_num   <- length(xbins) * length(ybins)
     if(pix_num > max_pixels){
       stop("Cooler subset will return up to ",prettyNum(pix_num,big.mark = ",")," pixels...to override this warning and run anyway, increase <max_pixels> or set to 'Inf'.")
@@ -132,7 +133,7 @@ read_cooler_hdf5  <- function(file_cool,gr_range1=NULL,gr_range2=NULL,diag_dista
       if(!silent) message("Fetching up to ",prettyNum(pix_num,big.mark = ",")," pixels...")
     }
 
-    #Get all bin combinations, and flip those where y < x (bottom triangle) as they are not stored in the .cool matrices.
+    # Get all bin combinations, and flip those where y < x (bottom triangle) as they are not stored in the .cool matrices.
     bin_tb  <- lapply(xbins,function(x){
       tibble(binx = x,biny=ybins)
     }) %>%
@@ -144,24 +145,34 @@ read_cooler_hdf5  <- function(file_cool,gr_range1=NULL,gr_range2=NULL,diag_dista
     xbins   <- select(bin_tb,binx) %>% unlist %>% unique
     ybins   <- select(bin_tb,biny) %>% unlist %>% unique
 
-    #Open persistent connection to HDF5.
+    # Open persistent connection to HDF5.
     hdf5  <- H5Fopen(file_cool)
 
-    #Load index.
+    # Load index.
     idx   <- h5read(hdf5,"indexes/bin1_offset")
     idx   <- tibble(bin_offset = idx) %>%
       mutate(bin_offset = as.integer(bin_offset + 1),
              bin_id = as.integer(row_number() - 1))
+
+    # Load bin data.
+    tb_bins <- h5read(hdf5,"bins") %>%
+      lapply(as.double) %>%
+      as_tibble %>%
+      mutate(bin_id = row_number())
+
+    # Merge bin data into index.
+    idx   <- left_join(idx,tb_bins,by="bin_id")
 
     #Determine which rows to retrieve.
     row_range<- filter(idx,bin_id %in% xbins) %>%
       select(bin_offset) %>%
       range
 
-    #Fetch relevant rows in x-dimension then filter y-dimension coordinates, close connection.
+    #Fetch relevant rows in x-dimension then filter y-dimension coordinates; close connection.
     pixels  <- h5read(hdf5,name = "pixels",start=row_range[1],count=diff(row_range),bit64conversion="int")
     H5Fclose(hdf5)
 
+    # Join retrieved pixels and bin data by both bin coordinates.
     pixels  <- pixels %>%
       lapply(as.double) %>%
       as_tibble %>%
