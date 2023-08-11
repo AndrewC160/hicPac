@@ -82,7 +82,11 @@ read_cooler_hdf5  <- function(file_cool,gr_range1=NULL,gr_range2=NULL,diag_dista
       if(is.null(names(file_cool))){
         names(file_cool)  <- basename(file_cool)
       }
-      if(disable_file_lock) h5disableFileLocking()
+      if(disable_file_lock){
+        h5disableFileLocking()
+      }else{
+        h5enableFileLocking()
+      }
 
       pixels  <- lapply(names(file_cool),function(fl_nm) {
         pxls  <- read_cooler_hdf5(file_cool = file_cool[fl_nm],
@@ -91,6 +95,7 @@ read_cooler_hdf5  <- function(file_cool,gr_range1=NULL,gr_range2=NULL,diag_dista
                                   diag_distance=diag_distance,
                                   silent=silent,
                                   max_pixels=max_pixels,
+                                  disable_file_lock = disable_file_lock,
                                   cache_tsv=NULL) %>%
           mutate(cooler=fl_nm)
       }) %>%
@@ -99,20 +104,19 @@ read_cooler_hdf5  <- function(file_cool,gr_range1=NULL,gr_range2=NULL,diag_dista
   }
   if(is.null(pixels)){
     # Fetch bin data.
-    gr_bins   <- read_cooler_bins_hdf5(file_cool)
+    gr_bins   <- read_cooler_bins_hdf5(file_cooler = file_cool,disable_file_lock = disable_file_lock)
 
     # Subset relevant bins.
     if(is.null(gr_range1)){
       xbins   <- gr_bins$bin_id
       ybins   <- gr_bins$bin_id
-      diag_distance <- Inf
     }else{
       #If a diagonal distance has been specified, expand gr1 to include 1x that distance on either end, otherwise left and right corners will be omitted in rotated plots.
       if(!is.null(diag_distance)){
         gr1   <- resize(gr_range1,width = width(gr_range1) + 2 * diag_distance,fix = "center")
       }else{
         gr1   <- gr_range1
-        diag_distance <- Inf
+        #diag_distance <- Inf
       }
       # NOTE: Add one bin to the end of the x-bins list otherwise last row will happen at the start of the last bin.
       xbins<- subsetByOverlaps(gr_bins,gr1)$bin_id
@@ -146,11 +150,11 @@ read_cooler_hdf5  <- function(file_cool,gr_range1=NULL,gr_range2=NULL,diag_dista
     ybins   <- select(bin_tb,biny) %>% unlist %>% unique
 
     # Open persistent connection to HDF5.
-    hdf5  <- H5Fopen(file_cool)
+    hdf5  <- H5Fopen(file_cool,flags="H5F_ACC_RDONLY")
 
     # Load index.
-    idx   <- h5read(hdf5,"indexes/bin1_offset")
-    idx   <- tibble(bin_offset = idx) %>%
+    idx   <- h5read(hdf5,"indexes/bin1_offset") %>%
+      tibble(bin_offset = .) %>%
       mutate(bin_offset = as.integer(bin_offset + 1),
              bin_id = as.integer(row_number() - 1))
 
@@ -170,6 +174,8 @@ read_cooler_hdf5  <- function(file_cool,gr_range1=NULL,gr_range2=NULL,diag_dista
 
     #Fetch relevant rows in x-dimension then filter y-dimension coordinates; close connection.
     pixels  <- h5read(hdf5,name = "pixels",start=row_range[1],count=diff(row_range),bit64conversion="int")
+
+    #Close HDF5.
     H5Fclose(hdf5)
 
     # Join retrieved pixels and bin data by both bin coordinates.
@@ -180,17 +186,19 @@ read_cooler_hdf5  <- function(file_cool,gr_range1=NULL,gr_range2=NULL,diag_dista
       filter(bin1_id %in% rev(xbins)[-1],
              bin2_id %in% rev(ybins)[-1]) %>%
       inner_join(by = c("bin1_id"="bin_id1"),
-        as_tibble(gr_bins) %>% select(-width,-strand) %>% rename_all(paste0,"1")
+                 as_tibble(gr_bins) %>% select(-width,-strand) %>% rename_all(paste0,"1")
       ) %>%
       inner_join(by = c("bin2_id"="bin_id2"),
-        as_tibble(gr_bins) %>% select(-width,-strand) %>% rename_all(paste0,"2")
+                 as_tibble(gr_bins) %>% select(-width,-strand) %>% rename_all(paste0,"2")
       ) %>%
       mutate(balanced = count * weight1 * weight2,
              log10_count = log10(count + 1)) %>%
       select(seqnames1,start_adj1,end_adj1,seqnames2,start_adj2,end_adj2,
              count,log10_count,starts_with("count"),weight1,weight2,balanced,
-             start1,end1,start2,end2,bin1_id,bin2_id,everything())  %>%
-      filter(abs(end2 - end1) <= diag_distance)
+             start1,end1,start2,end2,bin1_id,bin2_id,everything())
+    if(!is.null(diag_distance)){
+      pixels <- filter(pixels,abs(end2 - end1) <= diag_distance)
+    }
     if("count_wgs_nrm" %in% colnames(pixels)){
       pixels  <- mutate(pixels,log10_count_wgs_nrm = log10(count_wgs_nrm + 1))
     }
