@@ -49,7 +49,7 @@ patchwork_matrix  <- function(gr_list,hic_file,pixel_tsv,over_write=FALSE,max_pi
       mutate_at(c("seqnames1","seqnames2"),
                 function(x) factor(x,levels=paste0("chr",c(1:22,"X","Y"))))
   }else{
-    tb_bins <- patchwork_bins(gr_list,hic_file,boundaries_only = FALSE)
+    tb_bins <- patchwork_bins(gr_list = gr_list,hic_file = hic_file,boundaries_only = FALSE)
     tb_regs   <- tb_bins %>%
       group_by(region) %>%
       summarize(seqnames1 = first(seqnames1),

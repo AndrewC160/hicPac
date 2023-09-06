@@ -43,8 +43,8 @@ read_cooler_bins_hdf5 <- function(file_cooler,granges_list = NULL,ignore_strand=
     makeGRangesFromDataFrame(keep.extra.columns = TRUE)
 
   if(!is.null(granges_list)){
-    if(!is.list(granges_list)){
-      granges_list <- list(granges_list)
+    if(!inherits(granges_list,"GRangesList")){
+      granges_list <- GRangesList(granges_list)
     }
     if(is.null(names(granges_list))){
       names(granges_list) <- paste0("reg",c(1:length(granges_list)))
