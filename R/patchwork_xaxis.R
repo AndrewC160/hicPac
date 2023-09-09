@@ -1,26 +1,26 @@
 #' @title Patchwork X-axis
-#' 
-#' @description Given a table defining a given patchwork contig (generally the 
+#'
+#' @description Given a table defining a given patchwork contig (generally the
 #' output of patchwork_bins(boundaries_only=TRUE)), define an X-axis and breaks
-#' which are more descriptive. Every segment will include at least a start and 
-#' end break, and junctions between segments will be merged and annotated with 
-#' both coordinates (chr1:123,456 - chr4:654,321). Segments which are reversed 
-#' will include a "(-)" prefix indicating as much. Output is a list which 
-#' includes a title that is a general description of the contig ("6 contigs, 
-#' 2MB") and a vector of breakpoint labels named by the X-axis value of the 
+#' which are more descriptive. Every segment will include at least a start and
+#' end break, and junctions between segments will be merged and annotated with
+#' both coordinates (chr1:123,456 - chr4:654,321). Segments which are reversed
+#' will include a "(-)" prefix indicating as much. Output is a list which
+#' includes a title that is a general description of the contig ("6 contigs,
+#' 2MB") and a vector of breakpoint labels named by the X-axis value of the
 #' contig-specific coordinate system.
-#' 
+#'
 #' Example (reversed segment of Chr1 junctioned to a forward segment of Chr2):
 #' 1               100                              400
 #' (-)chr1:300,000 (-)chr1:100,000-chr2:100,000,000 chr2:100,600,000
-#' 
+#'
 #' @param tb_region Table defining the regions of the contig, generally the output of patchwork_bins(boundaries_only=TRUE).
-#' 
+#'
 #' @import dplyr
 #' @import tidyr
 #' @import clugPac
 #' @import magrittr
-#' 
+#'
 #' @export
 
 patchwork_xaxis   <- function(tb_region){
@@ -29,7 +29,7 @@ patchwork_xaxis   <- function(tb_region){
   mutate  <- dplyr::mutate
   select  <- dplyr::select
   arrange <- dplyr::arrange
-  
+
   tb  <- tb_region %>%
     filter(!trans_region) %>%
     mutate(width = end1 - start1,
@@ -37,8 +37,10 @@ patchwork_xaxis   <- function(tb_region){
     select(-seqnames2,-start2,-end2,-bin_alt2_1,-bin_alt2_2,-strand2) %>%
     mutate(frac = width / sum(width))
   x_ttl   <- summarize(tb,count=n(),size=prettyBP(sum(width))) %>% unlist
-  x_ttl   <- paste0(x_ttl['count']," segments, ",x_ttl['size'])
-  
+  x_ttl   <- paste0(x_ttl['count'],
+                    ifelse(nrow(tb) > 1," segments, "," segment, "),
+                    x_ttl['size'])
+
   x_brks  <- tb %>%
     rowwise %>%
     mutate(x_brks = case_when(frac > 0.7 ~ 5,
