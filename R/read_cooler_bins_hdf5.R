@@ -40,6 +40,8 @@ read_cooler_bins_hdf5 <- function(file_cooler,granges_list = NULL,ignore_strand=
     mutate(bin_id = as.integer(row_number()-1),
            start_adj = start + sq_offs[as.character(chrom)],
            end_adj = end + sq_offs[as.character(chrom)]) %>%
+    mutate(chrom = factor(chrom,levels=paste0("chr",c(1:22,"X","Y")))) %>%
+    filter(!is.na(chrom)) %>%
     makeGRangesFromDataFrame(keep.extra.columns = TRUE)
 
   if(!is.null(granges_list)){

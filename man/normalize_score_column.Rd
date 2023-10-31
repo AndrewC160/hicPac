@@ -4,18 +4,12 @@
 \alias{normalize_score_column}
 \title{Normalize HiC score column}
 \usage{
-normalize_score_column(
-  tb_pix,
-  score_column = "log10_count_wgs_nrm",
-  new_col_name = NULL
-)
+normalize_score_column(tb_pix, score_column = "log10_count_wgs_nrm")
 }
 \arguments{
 \item{tb_pix}{Pixel tibble to normalize.}
 
 \item{score_column}{Score column to normalize, defaults to "log10_count_wgs_nrm".}
-
-\item{new_col_name}{Name for normalized column. If NULL, original column will be replaced with normalized values.}
 }
 \description{
 When plotting multiple HiC interaction matrices together, score

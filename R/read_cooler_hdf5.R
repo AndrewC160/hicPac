@@ -98,7 +98,26 @@ read_cooler_hdf5  <- function(file_cool,gr_range1=NULL,gr_range2=NULL,diag_dista
                                   disable_file_lock = disable_file_lock,
                                   cache_tsv=NULL) %>%
           mutate(cooler=fl_nm)
-      }) %>%
+      })# %>%
+        #do.call(rbind,.)
+
+      fix_col_names   <- function(pix_tbl,col_names_req=col_nms){
+        # Make sure that all retrieved pixel files have all columns (and in the same order).
+        # If a table is missing one or more columns, add one with NA values.
+        missing_names <- setdiff(col_names_req,colnames(pix_tbl))
+        if(length(missing_names) > 0){
+          tb_fix <- lapply(missing_names, function(nm){
+            tibble(!!as.name(nm):=rep(NA,nrow(pix_tbl)))
+          }) %>% do.call(cbind,.)
+          pix_tbl_out <- cbind(pix_tbl,tb_fix)
+        }else{
+          pix_tbl_out <- pix_tbl
+        }
+        return(pix_tbl_out[,col_names_req])
+      }
+
+      col_nms <- lapply(pixels,colnames) %>% unlist %>% unique
+      pixels  <- lapply(pixels,fix_col_names,col_names_req = col_nms) %>%
         do.call(rbind,.)
     }
   }
@@ -191,10 +210,10 @@ read_cooler_hdf5  <- function(file_cool,gr_range1=NULL,gr_range2=NULL,diag_dista
       inner_join(by = c("bin2_id"="bin_id2"),
                  as_tibble(gr_bins) %>% select(-width,-strand) %>% rename_all(paste0,"2")
       ) %>%
-      mutate(balanced = count * weight1 * weight2,
+      mutate(#balanced = count * weight1 * weight2,
              log10_count = log10(count + 1)) %>%
       select(seqnames1,start_adj1,end_adj1,seqnames2,start_adj2,end_adj2,
-             count,log10_count,starts_with("count"),weight1,weight2,balanced,
+             count,log10_count,starts_with("count"),#weight1,weight2,balanced,
              start1,end1,start2,end2,bin1_id,bin2_id,everything())
     if(!is.null(diag_distance)){
       pixels <- filter(pixels,abs(end2 - end1) <= diag_distance)
