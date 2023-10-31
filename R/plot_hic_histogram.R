@@ -20,6 +20,7 @@
 #' @param retur_plot Should a plot be returned? Defaults to TRUE, and if FALSE a list of tables will be returned for use elsewhere.
 #' @param wgs_nrm Should WGS-normalized counts be used? Defaults to TRUE.
 #' @param log_scales Should a log10 scale be sued? Defaults to FALSE.
+#' @param ignore_diags How many diagonals should be dropped? Defaults to zero (none), while 1 would cause comparisons between the same bin (BinA vs. BinA) to be dropped, 2 would also drop adjacent bins, etc.
 #'
 #' @import dplyr
 #' @import tidyr
@@ -33,7 +34,7 @@
 #'
 #' @export
 
-plot_hic_histogram <- function(gr_trap,gr_window="chrom",cooler_fls,o_write=FALSE,return_plot=TRUE,wgs_nrm=TRUE,log_scale=FALSE,max_pix=5E6){
+plot_hic_histogram <- function(gr_trap,gr_window="chrom",cooler_fls,o_write=FALSE,return_plot=TRUE,wgs_nrm=TRUE,log_scale=FALSE,max_pix=5E6,ignore_diags=0){
   rename <- dplyr::rename
   mutate <- dplyr::mutate
   filter <- dplyr::filter
@@ -58,6 +59,7 @@ plot_hic_histogram <- function(gr_trap,gr_window="chrom",cooler_fls,o_write=FALS
     # Specific window.
     tb_pix <- read_cooler_hdf5(file_cool = cooler_fls,gr_range1=gr_trap,gr_range2=gr_window,max_pixels = max_pix)
   }
+  tb_pix  <- filter(tb_pix,abs(bin1_id-bin2_id) >= ignore_diags)
   if(!"cooler" %in% colnames(tb_pix)) tb_pix <- mutate(tb_pix,cooler="HiC")
   if("count_wgs_nrm" %in% colnames(tb_pix) & wgs_nrm){
     tb_pix <- mutate(tb_pix,count = count_wgs_nrm)

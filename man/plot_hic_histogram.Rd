@@ -12,7 +12,8 @@ plot_hic_histogram(
   return_plot = TRUE,
   wgs_nrm = TRUE,
   log_scale = FALSE,
-  max_pix = 5e+06
+  max_pix = 5e+06,
+  ignore_diags = 0
 )
 }
 \arguments{
@@ -25,6 +26,8 @@ plot_hic_histogram(
 \item{o_write}{Should existing <cache_tsv> files be regenerated? Defaults to FALSE.}
 
 \item{wgs_nrm}{Should WGS-normalized counts be used? Defaults to TRUE.}
+
+\item{ignore_diags}{How many diagonals should be dropped? Defaults to zero (none), while 1 would cause comparisons between the same bin (BinA vs. BinA) to be dropped, 2 would also drop adjacent bins, etc.}
 
 \item{retur_plot}{Should a plot be returned? Defaults to TRUE, and if FALSE a list of tables will be returned for use elsewhere.}
 
