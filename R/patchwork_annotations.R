@@ -37,7 +37,7 @@ patchwork_annotations <- function(granges_in,regions_tb=NULL,hic_file=NULL,gr_se
     if(is.null(hic_file) | is.null(gr_segments)) stop("Either a regions table from patchwork_bins() is required or both the hic_file and gr_segments arguments must be provided.")
     regions_tb <- patchwork_bins(gr_list = gr_segments,hic_file = fl_hic)
   }
-  regions_tb
+  #regions_tb
   gr_reg  <- filter(regions_tb,!trans_region) %>%
     mutate(bin_alt1_1 = bin_alt1_1 - 1,
            bin_alt2_1 = bin_alt2_1 - 1) %>%
