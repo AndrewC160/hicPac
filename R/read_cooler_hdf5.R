@@ -127,8 +127,8 @@ read_cooler_hdf5  <- function(file_cool,gr_range1=NULL,gr_range2=NULL,diag_dista
 
     # Subset relevant bins.
     if(is.null(gr_range1)){
-      xbins   <- gr_bins$bin_id
-      ybins   <- gr_bins$bin_id
+      xbins   <- as.double(gr_bins$bin_id)
+      ybins   <- as.double(gr_bins$bin_id)
     }else{
       #If a diagonal distance has been specified, expand gr1 to include 1x that distance on either end, otherwise left and right corners will be omitted in rotated plots.
       if(!is.null(diag_distance)){
@@ -149,7 +149,7 @@ read_cooler_hdf5  <- function(file_cool,gr_range1=NULL,gr_range2=NULL,diag_dista
     }
 
     # Determine how many pixels are about to be gathered, stop if there are too many.
-    pix_num   <- length(xbins) * length(ybins)
+    pix_num   <- as.double(length(xbins)) * as.double(length(ybins))
     if(pix_num > max_pixels){
       stop("Cooler subset will return up to ",prettyNum(pix_num,big.mark = ",")," pixels...to override this warning and run anyway, increase <max_pixels> or set to 'Inf'.")
     }else{
