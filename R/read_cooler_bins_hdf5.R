@@ -45,6 +45,16 @@ read_cooler_bins_hdf5 <- function(file_cooler,granges_list = NULL,ignore_strand=
     makeGRangesFromDataFrame(keep.extra.columns = TRUE)
 
   if(!is.null(granges_list)){
+    if(inherits(granges_list,"GRanges")){
+      if(length(granges_list) > 1){
+        granges_list <- granges_list %>%
+          as_tibble %>%
+          mutate(rn = row_number()) %>%
+          group_split(rn) %>%
+          lapply(makeGRangesFromDataFrame) %>%
+          GRangesList
+      }
+    }
     if(!inherits(granges_list,"GRangesList")){
       granges_list <- GRangesList(granges_list)
     }
