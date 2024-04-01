@@ -33,9 +33,9 @@ cooler_to_InteractionSet(
 \item{o_write_pixels}{Should an existing pixel cache file (<cache_rds> but with the ".rds" ending replaced with "_pix.tsv") be over-written? Defaults to FALSE, and no effect if a cache file exists and is not being over-written.}
 }
 \description{
-Read and convert a Cooler file (or list of files) into an InteractionSet 
-object. Each cooler file will be represented as a single column of each 
-assay. 
+Read and convert a Cooler file (or list of files) into an InteractionSet
+object. Each cooler file will be represented as a single column of each
+assay.
 
 In addition to the default "counts" assay, this function also includes assays
 for the 'count_wgs_nrm' (WGS-normalized counts) column. Additional assays for
@@ -48,11 +48,11 @@ threshold: Expected counts based on same chromosome (distance, logarithmic bins)
 All assays represent 2-dimensional data (specific to each pixel and sample).
 
 Default sample-specific data in colData() includes r_name (sample name),
-totals (total interactions per sample), and intra_median (intra-chromosome
+totals (total interactions per sample), and intra_median (inter-chromosome
 median per sample).
 
-Default pixel-specific data in rowData() includes bin1_id and bin2_id, as 
+Default pixel-specific data in rowData() includes bin1_id and bin2_id, as
 well as annotation of intra-chromosomal nature (intra=TRUE), raw distance
-between bin midpoints (distance; NA for inter-chromosomal pixels), and 
+between bin midpoints (distance; NA for inter-chromosomal pixels), and
 logarithmic distance bins (dist_bin; NA for inter-chromosomal pixels).
 }
