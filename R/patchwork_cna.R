@@ -6,6 +6,9 @@
 #' @param bdg_file Filename of Tabix-indexed file. Assumes index file is in place.
 #' @param score_fill Fill color of rectangles to draw. If not provided, a fill based on log2(CNA raw) is applied.
 #' @param num_y_brks Number of Y-axis breaks to be drawn. Defaults to 3.
+#' @param line_color_in Linecolor of lines separating segments. Defaults to gray20.
+#' @param linewidth_in Linewidth of lines separating segments. Defaults to 0.5.
+#' @param linetype_in Linetype of lines separating segments. Defaults to "dotted."
 #'
 #' @import ggplot2
 #' @import tidyr
@@ -17,7 +20,7 @@
 #'
 #' @export
 
-patchwork_cna <- function(regions_tb,bdg_file,score_fill,num_y_brks=3){
+patchwork_cna <- function(regions_tb,bdg_file,score_fill,num_y_brks=3,line_color_in="gray20",linewidth_in = 0.5,linetype_in="dotted"){
   arrange <- dplyr::arrange
   filter  <- dplyr::filter
   select  <- dplyr::select
@@ -27,11 +30,15 @@ patchwork_cna <- function(regions_tb,bdg_file,score_fill,num_y_brks=3){
   gr  <- filter(regions_tb,!trans_region) %>%
     select(seqnames1,start1,end1,strand1,region,bin_alt1_1,bin_alt1_2) %>%
     mutate(bin_alt1_1 = bin_alt1_1 - 1) %>%
+    arrange(bin_alt1_1,bin_alt1_2) %>%
     makeGRangesFromDataFrame(keep.extra.columns = TRUE,seqnames.field = "seqnames1",start.field="start1",end.field="end1",strand.field="strand1")
   names(gr) <- gr$region
 
-  tb_bdg  <- scan_bdg(bgz_files = bdg_file,gr_regions = gr) %>%
-    inner_join(as_tibble(gr) %>% select(region,start,end,bin_alt1_1,bin_alt1_2,strand) %>% rename(reg_start=start,reg_end=end),by="region") %>%
+  tb_bdg  <- lapply(names(gr), function(nm) {
+    scan_bdg(bdg_file,gr_regions = gr[nm]) %>%
+      as_tibble
+  }) %>% do.call(rbind,.) %>%
+    full_join(as_tibble(gr) %>% select(region,start,end,bin_alt1_1,bin_alt1_2,strand) %>% rename(reg_start=start,reg_end=end),by="region") %>%
     group_by(region) %>%
     mutate(width = reg_end - reg_start,
            start_frac = (start - reg_start)/width,
@@ -46,7 +53,8 @@ patchwork_cna <- function(regions_tb,bdg_file,score_fill,num_y_brks=3){
            end_bin = ifelse(strand == "+",bin_alt1_1 + width * end_frac,bin_alt1_2 - width * end_frac),
            bin_alt1_1 = ifelse(start_bin < end_bin,start_bin,end_bin),
            bin_alt1_2 = ifelse(start_bin < end_bin,end_bin,start_bin)) %>%
-    select(seqnames,start,end,strand,region,name,bin_alt1_1,bin_alt1_2,score)
+    select(seqnames,start,end,strand,region,name,bin_alt1_1,bin_alt1_2,score) %>%
+    ungroup
 
   x_rng<- c(0,max(tb_bdg$bin_alt1_2))
   x_ax <- patchwork_xaxis(regions_tb)
@@ -66,7 +74,7 @@ patchwork_cna <- function(regions_tb,bdg_file,score_fill,num_y_brks=3){
     theme(plot.background = element_rect(fill="white",color=NA),
           plot.margin = unit(c(0,0,-0.1,0),"lines"),
           panel.background = element_rect(fill=NA,color="black",linewidth=0.5),
-          panel.grid.major.x = element_line(color="lightgray",linetype="dotted",linewidth=0.5),
+          panel.grid.major.x = element_line(color=line_color_in,linetype=linetype_in,linewidth=linewidth_in),
           panel.grid.major.y = element_blank(),
           panel.grid.minor.y = element_blank(),
           panel.spacing.y = unit(0,"lines"),

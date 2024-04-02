@@ -4,7 +4,15 @@
 \alias{patchwork_cna}
 \title{Patchwork CNA}
 \usage{
-patchwork_cna(regions_tb, bdg_file, score_fill, num_y_brks = 3)
+patchwork_cna(
+  regions_tb,
+  bdg_file,
+  score_fill,
+  num_y_brks = 3,
+  line_color_in = "gray20",
+  linewidth_in = 0.5,
+  linetype_in = "dotted"
+)
 }
 \arguments{
 \item{regions_tb}{Region table, generally the output of patchwork_bins(boundaries_only=TRUE).}
@@ -14,6 +22,12 @@ patchwork_cna(regions_tb, bdg_file, score_fill, num_y_brks = 3)
 \item{score_fill}{Fill color of rectangles to draw. If not provided, a fill based on log2(CNA raw) is applied.}
 
 \item{num_y_brks}{Number of Y-axis breaks to be drawn. Defaults to 3.}
+
+\item{line_color_in}{Linecolor of lines separating segments. Defaults to gray20.}
+
+\item{linewidth_in}{Linewidth of lines separating segments. Defaults to 0.5.}
+
+\item{linetype_in}{Linetype of lines separating segments. Defaults to "dotted."}
 }
 \description{
 Plot raw CNA values. Returns a GGplot object.
