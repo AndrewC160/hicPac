@@ -178,10 +178,22 @@ read_cooler_hdf5  <- function(file_cool,gr_range1=NULL,gr_range2=NULL,diag_dista
              bin_id = as.integer(row_number() - 1))
 
     # Load bin data.
-    tb_bins <- h5read(hdf5,"bins") %>%
+    v_chrs  <- h5read(hdf5,"chroms")$name
+    tb_bins <- h5read(hdf5,"bins")
+    tb_bins$chrom <- factor(tb_bins$chrom,levels=v_chrs)
+    tb_bins <- tb_bins %>%
       lapply(as.double) %>%
       as_tibble %>%
-      mutate(bin_id = row_number())
+      mutate(chrom = factor(v_chrs[chrom],levels=v_chrs),
+             bin_id = row_number())
+    # v_chrs  <- h5read(hdf5,"chroms")$name
+    # tb_bins <- h5read(hdf5,"bins")
+    # tb_bins$chrom <- factor(tb_bins$chrom,levels=v_chrs)
+    # tb_bins <- tb_bins %>%
+    #   lapply(as.double) %>%
+    #   as_tibble %>%
+    #   mutate(chrom = factor(v_chrs[chrom],levels=v_chrs),
+    #          bin_id = row_number())
 
     # Merge bin data into index.
     idx   <- left_join(idx,tb_bins,by="bin_id")

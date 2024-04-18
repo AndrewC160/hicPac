@@ -14,7 +14,10 @@ patchwork_ogm_contigs(
   contig_size = 3,
   xmap_size = 2,
   junctions_only = TRUE,
-  return_tables_only = FALSE
+  return_tables_only = FALSE,
+  junction_linewidth = 0.5,
+  junction_line_color = "gray30",
+  junction_linetype = "solid"
 )
 }
 \arguments{
@@ -52,4 +55,9 @@ bin ID coordinates (bin_start/end) and y-values based on contig IDs. Intended
 for use with HiC patchwork_* functions, so it assumes that the regions_tb
 file is formatted as such, but in principle this table can be generated
 independently for use elsewhere.
+
+NOTE: "junctions_only" currently broken, need to be able to recognize
+duplicated segments as duplicates (if the same genomic position is included
+twice it does not count to find a contig between them), but seems to drop
+some non-junction contigs as well.
 }
