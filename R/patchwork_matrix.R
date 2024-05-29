@@ -7,10 +7,10 @@
 #' from 5' to 3' whose direction is indicated by strand, and a hic Cooler file
 #' (hic_file) from which to retrieve data.
 #'
-#' Given the instability of some rhdf5 functions (currently), this function
-#' requires the use of a cache system. First, a temporary directory is saved as
-#' a file with ".tsv" replaced with "_tmp" and every region is read directly
-#' into a TSV file in this directory. Once all TSVs have been found, these are
+#' Given the instability of some rhdf5 functions (currently), this function can
+#' make use of a cache system. First, a temporary directory is saved as a file
+#' with ".tsv" replaced with "_tmp" and every region is read directly into a TSV
+#' file in this directory. Once all TSVs have been found, these are
 #' read using data.table::fread() and concatenated into the output table. Once
 #' the table's existence is confirmed, the temporary directory and its contents
 #' are recursively unlinked. Hopefully this will turn out to be excessive once
@@ -40,7 +40,7 @@ patchwork_matrix  <- function(gr_list,hic_file,pixel_tsv,over_write=FALSE,max_pi
   select  <- dplyr::select
   arrange <- dplyr::arrange
 
-  if(missing(pixel_tsv)) stop("A cache file is required (pixel_tsv).")
+  #if(missing(pixel_tsv)) stop("A cache file is required (pixel_tsv).")
   if(is.null(names(gr_list))) names(gr_list) <- paste0("reg_",c(1:length(gr_list)))
   if(missing(pixel_tsv)) pixel_tsv <- ""
   if(file.exists(pixel_tsv) & !over_write){

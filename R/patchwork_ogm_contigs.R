@@ -47,6 +47,7 @@ patchwork_ogm_contigs  <- function(tb_ogm_in,regions_tb=NULL,hic_file=NULL,gr_se
   mutate  <- dplyr::mutate
   select  <- dplyr::select
   arrange <- dplyr::arrange
+  first   <- dplyr::first
 
   if(is.null(regions_tb)){
     if(is.null(hic_file) | is.null(gr_segments)) stop("Either a regions table from patchwork_bins() is required or both the hic_file and gr_segments arguments must be provided.")
@@ -80,41 +81,41 @@ patchwork_ogm_contigs  <- function(tb_ogm_in,regions_tb=NULL,hic_file=NULL,gr_se
   if(junctions_only){
     tb_x <- filter(tb_x,junction_spanning)
   }
+  if(nrow(tb_x) > 0){
+    contig_order <- tb_x %>%
+      group_by(contig_id) %>%
+      summarize(min_pos = min(c(bin_start,bin_end)),
+                max_pos = max(c(bin_start,bin_end)),
+                max_xmap= max(xmap_conf),
+                .groups="drop") %>%
+      arrange(desc(min_pos),desc(max_pos)) %>%
+      mutate(contig_id = as.character(contig_id)) %>%
+      select(contig_id) %>%
+      unlist %>%
+      unique
 
-  contig_order <- tb_x %>%
-    group_by(contig_id) %>%
-    summarize(min_pos = min(c(bin_start,bin_end)),
-              max_pos = max(c(bin_start,bin_end)),
-              max_xmap= max(xmap_conf),
-              .groups="drop") %>%
-    arrange(desc(min_pos),desc(max_pos)) %>%
-    mutate(contig_id = as.character(contig_id)) %>%
-    select(contig_id) %>%
-    unlist %>%
-    unique
+    tb_x <- tb_x %>%
+      mutate(contig_id = factor(as.character(contig_id),levels=contig_order)) %>%
+      mutate(ymax=as.integer(contig_id),
+             ymin=ymax-1)
 
-  tb_x <- tb_x %>%
-    mutate(contig_id = factor(as.character(contig_id),levels=contig_order)) %>%
-    mutate(ymax=as.integer(contig_id),
-           ymin=ymax-1)
+    tb_l <- tb_x %>%
+      group_by(region,contig_id,xmap_id,xmap_conf,ymin,ymax,junction_spanning) %>%
+      summarize(bin_start = min(c(bin_start,bin_end)),
+                bin_end = max(c(bin_start,bin_end)),
+                .groups="drop") %>%
+      mutate(y = (ymin + ymax)/2)
 
-  tb_l <- tb_x %>%
-    group_by(region,contig_id,xmap_id,xmap_conf,ymin,ymax,junction_spanning) %>%
-    summarize(bin_start = min(c(bin_start,bin_end)),
-              bin_end = max(c(bin_start,bin_end)),
-              .groups="drop") %>%
-    mutate(y = (ymin + ymax)/2)
-
-  tb_c <- tb_l %>%
-    mutate(y = ymin+0.5,
-           yend = y) %>%
-    group_by(contig_id) %>%
-    summarize(x=min(bin_start),
-              xend=max(bin_end),
-              y = first(y),
-              .groups="drop") %>%
-    arrange(desc(x))
-
+    tb_c <- tb_l %>%
+      mutate(y = ymin+0.5,
+             yend = y) %>%
+      group_by(contig_id) %>%
+      summarize(x=min(bin_start),
+                xend=max(bin_end),
+                y = first(y),
+                .groups="drop") %>%
+      arrange(desc(x))
+  }
   if(return_tables_only){
     p_out <- list(tags=tb_x,
                   xmaps=tb_l,
@@ -124,14 +125,13 @@ patchwork_ogm_contigs  <- function(tb_ogm_in,regions_tb=NULL,hic_file=NULL,gr_se
                         axis.text.x = element_text(angle=45,hjust=1,vjust=1),
                         axis.ticks.x = element_blank())
     if(nrow(tb_x) == 0){
-      p <- ggplot() +
+      p_out <- ggplot() +
         scale_x_continuous(name = x_ax$title,
                            limits= x_rng,
                            expand= c(0,0),
                            breaks = x_ax$breaks,
                            labels = names(x_ax$breaks)) +
-        scale_y_continuous(expand = c(0,0),
-                           limits=y_rng) +
+        scale_y_continuous(expand = c(0,0)) +
         p_theme
     }else{
       p_out <- ggplot(tb_x,

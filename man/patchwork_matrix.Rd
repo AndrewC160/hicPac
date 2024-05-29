@@ -32,10 +32,10 @@ a series of genomic regions. Starts with a list of genomic regions (gr_list)
 from 5' to 3' whose direction is indicated by strand, and a hic Cooler file
 (hic_file) from which to retrieve data.
 
-Given the instability of some rhdf5 functions (currently), this function
-requires the use of a cache system. First, a temporary directory is saved as
-a file with ".tsv" replaced with "_tmp" and every region is read directly
-into a TSV file in this directory. Once all TSVs have been found, these are
+Given the instability of some rhdf5 functions (currently), this function can
+make use of a cache system. First, a temporary directory is saved as a file
+with ".tsv" replaced with "_tmp" and every region is read directly into a TSV
+file in this directory. Once all TSVs have been found, these are
 read using data.table::fread() and concatenated into the output table. Once
 the table's existence is confirmed, the temporary directory and its contents
 are recursively unlinked. Hopefully this will turn out to be excessive once
