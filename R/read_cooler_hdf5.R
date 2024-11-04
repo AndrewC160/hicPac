@@ -29,7 +29,7 @@
 #'
 #' @param file_cool Name of .cool file(s) with the appropriate bin size. If multiple files are provided, functions is run recursively and tables are combined (including cache TSV).
 #' @param gr_range1 GRange of contiguous region for X dimension. Defaults to entire genome, and must be contiguous.
-#' @param gr_range2 GRange of contiguous region for Y dimension. Defaults to values of gr_range1.
+#' @param gr_range2 GRange of regions for Y dimension. Defaults to values of gr_range1, and can be multiple ranges.
 #' @param diag_distace Maximum distance from the diagonal (useful for filtering pixels from tables meant for rotated plots). Filter is applied AFTER fetching pixels, so does not generally help performance.
 #' @param silent Should processing time messages be suppressed? Defaults to FALSE.
 #' @param max_pixels Maximum number of pixels to retrieve without erroring out. Defaults to 6.25 million (2500x2500 grid), can also be set to Inf to disregard.
@@ -164,7 +164,9 @@ read_cooler_hdf5  <- function(file_cool,gr_range1=NULL,gr_range2=NULL,diag_dista
       mutate(flip_x = ifelse(biny < binx,biny,NA),
              flip_y = ifelse(biny < binx,binx,NA)) %>%
       mutate(binx = ifelse(is.na(flip_x),binx,flip_x),
-             biny = ifelse(is.na(flip_y),biny,flip_y))
+             biny = ifelse(is.na(flip_y),biny,flip_y)) %>%
+      ####
+      filter(biny %in% xbins)
     xbins   <- select(bin_tb,binx) %>% unlist %>% unique
     ybins   <- select(bin_tb,biny) %>% unlist %>% unique
 
