@@ -21,7 +21,7 @@
 
 patchwork_region_outlines <- function(tb_regs_in){
   mutate  <- dplyr::mutate
-  x_min   <-
+
   tb_regs_in %>%
     mutate(
       widA = bin_alt1_2 - bin_alt1_1,
@@ -35,18 +35,6 @@ patchwork_region_outlines <- function(tb_regs_in){
       yB = ((widB + widC)/2),
       yC = (widB/2)-0.5,
       yD = ((widA+widB)/2)) %>%
-    # mutate(
-    #   widA = end_adj1 - start_adj1,
-    #   widB = start_adj1 - end_adj2,
-    #   widC = end_adj2 - start_adj2,
-    #   xA = (start_adj1 + (widA + widB + widC)/2)-0.5,
-    #   xB = (start_adj1 + widA + (widB + widC)/2),
-    #   xC = (end_adj1 + (widB)/2)-0.5,
-    #   xD = (start_adj1 + (widA + widB)/2)-1,
-    #   yA = ((widA + widB + widC)/2)+0.5,
-    #   yB = ((widB + widC)/2),
-    #   yC = (widB/2)-0.5,
-    #   yD = ((widA+widB)/2)) %>%
     pivot_longer(cols=c(xA,xB,xC,xD,yA,yB,yC,yD),
                  names_pattern=c("(.)(.)"),
                  names_to=c("dim","coord"),
