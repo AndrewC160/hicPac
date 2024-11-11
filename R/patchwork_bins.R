@@ -59,10 +59,6 @@ patchwork_bins    <- function(gr_list,hic_file,boundaries_only=TRUE,disable_file
                 strand1 = first(strand1),
                 start1 = min(start1),
                 end1 = max(end1),
-                ###
-                start_adj1 = min(start_adj1),
-                end_adj1 = max(end_adj1),
-                ###
                 bin_id1_1 = min(bin_id1),
                 bin_id1_2 = max(bin_id1),
                 bin_alt1_1= min(bin_alt1),
@@ -71,10 +67,6 @@ patchwork_bins    <- function(gr_list,hic_file,boundaries_only=TRUE,disable_file
                 strand2 = first(strand2),
                 start2 = min(start2),
                 end2 = max(end2),
-                ###
-                start_adj2 = min(start_adj2),
-                end_adj2 = max(end_adj2),
-                ###
                 bin_id2_1 = min(bin_id2),
                 bin_id2_2 = max(bin_id2),
                 bin_alt2_1= min(bin_alt2),
