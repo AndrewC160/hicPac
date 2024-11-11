@@ -60,14 +60,7 @@ read_cooler_hdf5  <- function(file_cool,gr_range1=NULL,gr_range2=NULL,diag_dista
   rename  <- dplyr::rename
 
   if(!silent) tic()
-  if(!return_table & is.null(cache_tsv)) stop("If a table isn't going to be returned (return_table=FALSE), a cache file must be included (cache_tsv).")
-  # While it's technically possible to search non-contiguous regions, behavior
-  # gets weird, and very inefficient (extracting for chr1 and chr20 will require
-  # retrieving all chromosomes in between, for instance).
-  if(length(gr_range1) > 1 | length(gr_range2) > 1)
-    stop("Ranges (gr_range1 and gr_range2) should be of length 1, i.e. contiguous.\n",
-         "\nUse lapply() if searching multiple regions.\n",
-         "\ti.e.: lapply(1:length(gr), function(i) read_cooler_hdf5(gr_range1=gr[i])")
+  if(!return_table & is.null(cache_tsv)) stop("If a table isn't goint to be returned (return_table), a cache file must be included.")
   pixels  <- NULL
   if(!is.null(cache_tsv)){
     if(file.exists(cache_tsv) & !overwrite_cache){
@@ -106,7 +99,7 @@ read_cooler_hdf5  <- function(file_cool,gr_range1=NULL,gr_range2=NULL,diag_dista
                                   cache_tsv=NULL) %>%
           mutate(cooler=fl_nm)
       })# %>%
-        #do.call(rbind,.)
+      #do.call(rbind,.)
 
       fix_col_names   <- function(pix_tbl,col_names_req=col_nms){
         # Make sure that all retrieved pixel files have all columns (and in the same order).
@@ -138,19 +131,20 @@ read_cooler_hdf5  <- function(file_cool,gr_range1=NULL,gr_range2=NULL,diag_dista
       ybins   <- as.double(gr_bins$bin_id)
     }else{
       #If a diagonal distance has been specified, expand gr1 to include 1x that distance on either end, otherwise left and right corners will be omitted in rotated plots.
-      if(is.null(diag_distance)){
-        gr1   <- gr_range1
-      }else{
+      if(!is.null(diag_distance)){
         gr1   <- resize(gr_range1,width = width(gr_range1) + 2 * diag_distance,fix = "center")
+      }else{
+        gr1   <- gr_range1
+        #diag_distance <- Inf
       }
       # NOTE: Add one bin to the end of the x-bins list otherwise last row will happen at the start of the last bin.
       xbins<- subsetByOverlaps(gr_bins,gr1)$bin_id
-      xbins<- c(xbins,max(xbins)+1)
+      xbins<- c(xbins,max(xbins+1))
       if(is.null(gr_range2)){
         ybins <- xbins
       }else{
         ybins <- subsetByOverlaps(gr_bins,gr_range2)$bin_id
-        ybins <- c(ybins,max(ybins)+1)
+        ybins <- c(ybins,max(ybins + 1))
       }
     }
 
@@ -167,7 +161,7 @@ read_cooler_hdf5  <- function(file_cool,gr_range1=NULL,gr_range2=NULL,diag_dista
       tibble(binx = x,biny=ybins)
     }) %>%
       do.call(rbind,.) %>%
-      swap_columns("binx","biny",function(x,y) x > y)
+      swap_columns("binx","biny",function(x,y) x>y)
       # mutate(flip_x = ifelse(biny < binx,biny,NA),
       #        flip_y = ifelse(biny < binx,binx,NA)) %>%
       # mutate(binx = ifelse(is.na(flip_x),binx,flip_x),
@@ -185,17 +179,16 @@ read_cooler_hdf5  <- function(file_cool,gr_range1=NULL,gr_range2=NULL,diag_dista
              bin_id = as.integer(row_number() - 1))
 
     # Load bin data.
-    v_chrs  <- h5read(hdf5,"chroms")$name
-    tb_bins <- h5read(hdf5,"bins")
-    tb_bins$chrom <- factor(tb_bins$chrom,levels=v_chrs)
-    tb_bins <- tb_bins %>%
+    tb_bins <- h5read(hdf5,"bins") %>%
       lapply(as.double) %>%
       as_tibble %>%
-      mutate(chrom = factor(v_chrs[chrom],levels=v_chrs),
-             bin_id = row_number())
+      mutate(bin_id = row_number())
+
+    # Merge bin data into index.
+    idx   <- left_join(idx,tb_bins,by="bin_id")
 
     #Determine which rows to retrieve.
-    row_range<- filter(idx,bin_id %in% xbs | bin_id %in% ybs) %>%
+    row_range<- filter(idx,bin_id %in% xbins) %>%
       select(bin_offset) %>%
       range
 
@@ -209,28 +202,20 @@ read_cooler_hdf5  <- function(file_cool,gr_range1=NULL,gr_range2=NULL,diag_dista
     pixels  <- pixels %>%
       lapply(as.double) %>%
       as_tibble %>%
-      ##### 07NOV24 - Update to use swap_columns()
-      # Possible to get weird behavior when searching non-contiguous regions.
-      full_join(bin_tb,by=c("bin1_id"="binx","bin2_id"="biny")) %>%
-      swap_columns("bin1_id","bin2_id","swap_coords") %>%
-      select(-swap_coords) %>%
       #Filter out anything not in range 1 or range 2, including "extra" bins added for filtering step.
       filter(bin1_id %in% rev(xbins)[-1],
              bin2_id %in% rev(ybins)[-1]) %>%
-      #####
       inner_join(by = c("bin1_id"="bin_id1"),
-        as_tibble(gr_bins) %>% select(-width,-strand) %>% rename_all(paste0,"1")
+                 as_tibble(gr_bins) %>% select(-width,-strand) %>% rename_all(paste0,"1")
       ) %>%
       inner_join(by = c("bin2_id"="bin_id2"),
-        as_tibble(gr_bins) %>% select(-width,-strand) %>% rename_all(paste0,"2")
+                 as_tibble(gr_bins) %>% select(-width,-strand) %>% rename_all(paste0,"2")
       ) %>%
       mutate(#balanced = count * weight1 * weight2,
-             log10_count = log10(count + 1)) %>%
+        log10_count = log10(count + 1)) %>%
       select(seqnames1,start_adj1,end_adj1,seqnames2,start_adj2,end_adj2,
              count,log10_count,starts_with("count"),#weight1,weight2,balanced,
-             start1,end1,start2,end2,bin1_id,bin2_id,everything()) %>%
-      ### Should this be required? Currently joining pixels above and below diagonal...
-      filter(bin2_id >= bin1_id)
+             start1,end1,start2,end2,bin1_id,bin2_id,everything())
     if(!is.null(diag_distance)){
       pixels <- filter(pixels,abs(end2 - end1) <= diag_distance)
     }
