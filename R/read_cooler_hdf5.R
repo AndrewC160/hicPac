@@ -161,10 +161,11 @@ read_cooler_hdf5  <- function(file_cool,gr_range1=NULL,gr_range2=NULL,diag_dista
       tibble(binx = x,biny=ybins)
     }) %>%
       do.call(rbind,.) %>%
-      mutate(flip_x = ifelse(biny < binx,biny,NA),
-             flip_y = ifelse(biny < binx,binx,NA)) %>%
-      mutate(binx = ifelse(is.na(flip_x),binx,flip_x),
-             biny = ifelse(is.na(flip_y),biny,flip_y))
+      swap_columns("binx","biny",function(x,y) x > y)
+      # mutate(flip_x = ifelse(biny < binx,biny,NA),
+      #        flip_y = ifelse(biny < binx,binx,NA)) %>%
+      # mutate(binx = ifelse(is.na(flip_x),binx,flip_x),
+      #        biny = ifelse(is.na(flip_y),biny,flip_y))
     xbins   <- select(bin_tb,binx) %>% unlist %>% unique
     ybins   <- select(bin_tb,biny) %>% unlist %>% unique
 
