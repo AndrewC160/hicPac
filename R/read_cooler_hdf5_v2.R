@@ -208,7 +208,7 @@ read_cooler_hdf5  <- function(file_cool,gr_range1=NULL,gr_range2=NULL,diag_dista
       as_tibble %>%
       ##### 07NOV24 - Update to use swap_columns()
       # Possible to get weird behavior when searching non-contiguous regions.
-      full_join(bin_tb,by=c("bin1_id"="binx","bin2_id"="biny")) %>%
+      inner_join(bin_tb,by=c("bin1_id"="binx","bin2_id"="biny")) %>%
       swap_columns("bin1_id","bin2_id","swap_coords") %>%
       select(-swap_coords) %>%
       #Filter out anything not in range 1 or range 2, including "extra" bins added for filtering step.
@@ -219,7 +219,7 @@ read_cooler_hdf5  <- function(file_cool,gr_range1=NULL,gr_range2=NULL,diag_dista
         as_tibble(gr_bins) %>% select(-width,-strand) %>% rename_all(paste0,"1")
       ) %>%
       inner_join(by = c("bin2_id"="bin_id2"),
-        as_tibble(gr_bins) %>% select(-width,-strand) %>% rename_all(paste0,"2")
+                 as_tibble(gr_bins) %>% select(-width,-strand) %>% rename_all(paste0,"2")
       ) %>%
       mutate(#balanced = count * weight1 * weight2,
              log10_count = log10(count + 1)) %>%

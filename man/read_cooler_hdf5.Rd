@@ -22,7 +22,7 @@ read_cooler_hdf5(
 
 \item{gr_range1}{GRange of contiguous region for X dimension. Defaults to entire genome, and must be contiguous.}
 
-\item{gr_range2}{GRange of contiguous region for Y dimension. Defaults to values of gr_range1.}
+\item{gr_range2}{GRange of regions for Y dimension. Defaults to values of gr_range1, and can be multiple ranges.}
 
 \item{silent}{Should processing time messages be suppressed? Defaults to FALSE.}
 
