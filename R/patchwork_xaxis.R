@@ -15,6 +15,8 @@
 #' (-)chr1:300,000 (-)chr1:100,000-chr2:100,000,000 chr2:100,600,000
 #'
 #' @param tb_region Table defining the regions of the contig, generally the output of patchwork_bins(boundaries_only=TRUE).
+#' @param simplify_labels Should genome coordinates be simplified into basepair units (i.e. 15,000,000 becomes 15MB)? Defaults to FALSE.
+#' @param simplify_digits If <simplify_labels> is TRUE, how many digits should be used when rounding? Defaults to 3.
 #'
 #' @import dplyr
 #' @import tidyr
@@ -23,7 +25,7 @@
 #'
 #' @export
 
-patchwork_xaxis   <- function(tb_region){
+patchwork_xaxis   <- function(tb_region,simplify_labels=FALSE,simplify_digits=3){
   filter  <- dplyr::filter
   rename  <- dplyr::rename
   mutate  <- dplyr::mutate
@@ -40,6 +42,12 @@ patchwork_xaxis   <- function(tb_region){
   x_ttl   <- paste0(x_ttl['count'],
                     ifelse(nrow(tb) > 1," segments, "," segment, "),
                     x_ttl['size'])
+
+  if(simplify_labels){
+    lab_func <- function(x) prettyBP(x,digits=simplify_digits)
+  }else{
+    lab_func <- comma
+  }
 
   x_brks  <- tb %>%
     rowwise %>%
@@ -67,14 +75,28 @@ patchwork_xaxis   <- function(tb_region){
            x_vals = reg_start + (width * x_frac),
            bound = case_when(row_number() == 1 ~ "left",
                              row_number() == n() ~ "right",
-                             TRUE ~ "mid")) %>%
-    mutate(label = case_when(strand1 == "-" & bound != "mid" ~ paste0("(-)",seqnames1,":",comma(x_vals)),
-                             bound != "mid" ~ paste0(seqnames1,":",comma(x_vals)) ,
-                             TRUE ~ comma(x_vals))) %>%
+                             TRUE ~ "mid"),
+           label = lab_func(x_vals),
+           label = case_when(strand1 == "-" & bound != "mid" ~ paste0("(-)",seqnames1,":",label),
+                             bound != "mid" ~ paste0(seqnames1,":",label) ,
+                             TRUE ~ label)) %>%
     ungroup %>%
     mutate(label = ifelse(bound=="right" & lead(bound,default="")=="left",paste(label,lead(label),sep="-\n"),label),
            label = ifelse(bound=="left"& lag(bound,default="")=="right","",label)) %>%
     filter(label != "") %>%
     vectify(x_brks,label)
+  # if(simplify_labels){
+  #   x_brks <- mutate(x_brks,label = prettyBP(x_vals))
+  # }else{
+  #   x_brks <- mutate(x_brks,label = comma(x_vals))
+  # }
+  # x_brks <- x_brks %>%
+    # mutate(label = case_when(strand1 == "-" & bound != "mid" ~ paste0("(-)",seqnames1,":",label),
+    #                                bound != "mid" ~ paste0(seqnames1,":",label) ,
+    #                                TRUE ~ label)) %>%
+    # mutate(label = case_when(strand1 == "-" & bound != "mid" ~ paste0("(-)",seqnames1,":",comma(x_vals)),
+    #                          bound != "mid" ~ paste0(seqnames1,":",comma(x_vals)) ,
+    #                          TRUE ~ comma(x_vals))) %>%
   return(list(title = x_ttl,breaks=x_brks))
 }
+sd

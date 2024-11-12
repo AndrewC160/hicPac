@@ -1,23 +1,27 @@
 #' @title Reflect pixel matrix.
-#' 
+#'
 #' @description
 #' Reflect a (non-rotated) pixel matrix across the diagonal (i.e. swap columns
 #' with start/end/seqnames values). Note that the only columns that are swapped
 #' are the seqnames, start, end, start_adj, end_adj, and bin1/bin2 id columns.
+#' Others will need to be swapped manually, for instance via:
+#'
+#' swap_columns(tb_pix,"column1","column2")
+#'
 #' To use rotate_pix_45(), perform the reflection first, i.e.:
-#' 
-#' read_cooler_hdf5(<file_in) %>%
+#'
+#' read_cooler_hdf5(<file_in>) %>%
 #'  reflect_pixel_matrix() %>%
 #'  rotate_pix_45()
-#' 
+#'
 #' @param tb_pix_in Tibble of pixel data (as output by read_cooler_hdf5(), typically).
-#' 
+#'
 #' @import tibble
 #' @import clugPac
 #' @import magrittr
 #' @import dplyr
 #' @import tidyr
-#' 
+#'
 #' @export
 
 reflect_pixel_matrix  <- function(tb_pix_in){
