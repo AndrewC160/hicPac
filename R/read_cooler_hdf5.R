@@ -138,12 +138,12 @@ read_cooler_hdf5  <- function(file_cool,gr_range1=NULL,gr_range2=NULL,diag_dista
         #diag_distance <- Inf
       }
       # NOTE: Add one bin to the end of the x-bins list otherwise last row will happen at the start of the last bin.
-      xbins<- subsetByOverlaps(gr_bins,gr1)$bin_id
+      xbins<- subsetByOverlaps(gr_bins,gr1,minoverlap = 1L)$bin_id
       xbins<- c(xbins,max(xbins+1))
       if(is.null(gr_range2)){
         ybins <- xbins
       }else{
-        ybins <- subsetByOverlaps(gr_bins,gr_range2)$bin_id
+        ybins <- subsetByOverlaps(gr_bins,gr_range2,minoverlap = 1L)$bin_id
         ybins <- c(ybins,max(ybins + 1))
       }
     }
@@ -192,7 +192,7 @@ read_cooler_hdf5  <- function(file_cool,gr_range1=NULL,gr_range2=NULL,diag_dista
       select(bin_offset) %>%
       range
 
-    #Fetch relevant rows in x-dimension then filter y-dimension coordinates; close connection.
+    #Fetch relevant rows in x-dimension then filter y-dimension coordinates.
     pixels  <- h5read(hdf5,name = "pixels",start=row_range[1],count=diff(row_range),bit64conversion="int")
 
     #Close HDF5.
@@ -206,10 +206,10 @@ read_cooler_hdf5  <- function(file_cool,gr_range1=NULL,gr_range2=NULL,diag_dista
       filter(bin1_id %in% rev(xbins)[-1],
              bin2_id %in% rev(ybins)[-1]) %>%
       inner_join(by = c("bin1_id"="bin_id1"),
-                 as_tibble(gr_bins) %>% select(-width,-strand) %>% rename_all(paste0,"1")
+        as_tibble(gr_bins) %>% select(-width,-strand) %>% rename_all(paste0,"1")
       ) %>%
       inner_join(by = c("bin2_id"="bin_id2"),
-                 as_tibble(gr_bins) %>% select(-width,-strand) %>% rename_all(paste0,"2")
+        as_tibble(gr_bins) %>% select(-width,-strand) %>% rename_all(paste0,"2")
       ) %>%
       mutate(#balanced = count * weight1 * weight2,
         log10_count = log10(count + 1)) %>%

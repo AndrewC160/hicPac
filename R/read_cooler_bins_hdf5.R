@@ -70,7 +70,9 @@ read_cooler_bins_hdf5 <- function(file_cooler,granges_list = NULL,ignore_strand=
                strand = ifelse(rvrs,"-","+"))
     }) %>%
       do.call(rbind,.) %>%
-      mutate(bin_alt = row_number()) %>%
+      # UPDATED 11DEC24:#
+      mutate(bin_alt = row_number()-1) %>%
+      ###################
       makeGRangesFromDataFrame(keep.extra.columns = TRUE,
                                seqnames.field = "seqnames",
                                start.field = "start",
@@ -79,3 +81,4 @@ read_cooler_bins_hdf5 <- function(file_cooler,granges_list = NULL,ignore_strand=
   }
   return(gr_bins)
 }
+

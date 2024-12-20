@@ -11,10 +11,11 @@
 #' To use rotate_pix_45(), perform the reflection first, i.e.:
 #'
 #' read_cooler_hdf5(<file_in>) %>%
-#'  reflect_pixel_matrix() %>%
-#'  rotate_pix_45()
+#'  reflect_pixel_matrix %>%
+#'  rotate_pix_45
 #'
 #' @param tb_pix_in Tibble of pixel data (as output by read_cooler_hdf5(), typically).
+#' @param drop_diagonal Boolean, should diagonal points (bin1==bin2) be omitted? Defaults to FALSE.
 #'
 #' @import tibble
 #' @import clugPac
@@ -24,13 +25,14 @@
 #'
 #' @export
 
-reflect_pixel_matrix  <- function(tb_pix_in){
-  tb_pix_in %>%
+reflect_pixel_matrix  <- function(tb_pix_in,drop_diagonal=FALSE){
+  tb <- tb_pix_in %>%
     swap_columns("seqnames1","seqnames2") %>%
     swap_columns("start1","start2") %>%
     swap_columns("end1","end2") %>%
     swap_columns("start_adj1","start_adj2") %>%
     swap_columns("end_adj1","end_adj2") %>%
-    swap_columns("bin1_id","bin2_id") %>%
-    return()
+    swap_columns("bin1_id","bin2_id")
+  if(drop_diagonal) tb <- filter(tb,bin1_id != bin2_id)
+  return(tb)
 }

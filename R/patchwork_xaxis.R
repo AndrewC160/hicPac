@@ -17,6 +17,7 @@
 #' @param tb_region Table defining the regions of the contig, generally the output of patchwork_bins(boundaries_only=TRUE).
 #' @param simplify_labels Should genome coordinates be simplified into basepair units (i.e. 15,000,000 becomes 15MB)? Defaults to FALSE.
 #' @param simplify_digits If <simplify_labels> is TRUE, how many digits should be used when rounding? Defaults to 3.
+#' @param invert_junction_labels Boolean; should junction labels be reversed? Useful if axis will be used for Y-axis. Defaults to FALSE.
 #'
 #' @import dplyr
 #' @import tidyr
@@ -25,7 +26,7 @@
 #'
 #' @export
 
-patchwork_xaxis   <- function(tb_region,simplify_labels=FALSE,simplify_digits=3){
+patchwork_xaxis   <- function(tb_region,simplify_labels=FALSE,simplify_digits=3,invert_junction_labels=FALSE){
   filter  <- dplyr::filter
   rename  <- dplyr::rename
   mutate  <- dplyr::mutate
@@ -56,10 +57,21 @@ patchwork_xaxis   <- function(tb_region,simplify_labels=FALSE,simplify_digits=3)
                               frac > 0.2 ~ 3,
                               TRUE ~ 2)) %>%
     mutate(x_brks = list(as.integer(seq(bin_alt1_1,bin_alt1_2,length.out=x_brks)))) %>%
-    group_by(region) %>%
     unnest(x_brks) %>%
+    group_by(region) %>%
     mutate(x_frac = (x_brks - min(x_brks)) / (max(x_brks) - min(x_brks)),
            x_vals = (max(end1) - min(start1))*x_frac + min(start1)) %>%
+    group_by(region) %>%
+    # 24DEC11: In cases where only one pixel is present per region, x-labels break.
+    # In these cases manually establish start/end coordinates/fractions.
+    mutate(x_frac = case_when(is.na(x_frac) & row_number() == 1 ~ 0,
+                             is.na(x_frac) & row_number() == n() ~ 1,
+                             TRUE ~ x_frac),
+           x_vals = case_when(is.na(x_vals) & row_number() == 1 ~ start1,
+                              is.na(x_vals) & row_number() == n() ~ end1,
+                              TRUE ~ x_vals)) %>%
+    ##########################################################################
+    ungroup %>%
     group_by(region,strand1,seqnames1) %>%
     summarize(x_brks = list(x_brks),
               x_vals = list(x_vals),
@@ -81,22 +93,14 @@ patchwork_xaxis   <- function(tb_region,simplify_labels=FALSE,simplify_digits=3)
                              bound != "mid" ~ paste0(seqnames1,":",label) ,
                              TRUE ~ label)) %>%
     ungroup %>%
-    mutate(label = ifelse(bound=="right" & lead(bound,default="")=="left",paste(label,lead(label),sep="-\n"),label),
-           label = ifelse(bound=="left"& lag(bound,default="")=="right","",label)) %>%
+    mutate(label = case_when(bound == "right" & lead(bound,default="")=="left" & invert_junction_labels ~ paste(lead(label),label,sep="-\n"),
+                             bound == "right" & lead(bound,default="")=="left" ~ paste(label,lead(label),sep="-\n"),
+                             TRUE ~ label),
+           label = ifelse(bound == "left" & lag(bound,default="")=="right","",label)) %>%
     filter(label != "") %>%
     vectify(x_brks,label)
-  # if(simplify_labels){
-  #   x_brks <- mutate(x_brks,label = prettyBP(x_vals))
-  # }else{
-  #   x_brks <- mutate(x_brks,label = comma(x_vals))
-  # }
-  # x_brks <- x_brks %>%
-    # mutate(label = case_when(strand1 == "-" & bound != "mid" ~ paste0("(-)",seqnames1,":",label),
-    #                                bound != "mid" ~ paste0(seqnames1,":",label) ,
-    #                                TRUE ~ label)) %>%
-    # mutate(label = case_when(strand1 == "-" & bound != "mid" ~ paste0("(-)",seqnames1,":",comma(x_vals)),
-    #                          bound != "mid" ~ paste0(seqnames1,":",comma(x_vals)) ,
-    #                          TRUE ~ comma(x_vals))) %>%
-  return(list(title = x_ttl,breaks=x_brks))
+
+  x_lims <- range(x_brks) + c(0,1)
+  return(list(title = x_ttl,breaks=x_brks,limits=x_lims))
 }
-sd
+

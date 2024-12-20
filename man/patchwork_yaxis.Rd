@@ -12,7 +12,7 @@ patchwork_yaxis(tb_region, break_num = 4)
 \item{break_num}{Number of breaks to include on the axis; defaults to 4.}
 }
 \description{
-Given a table defining a given patchwork contig (generally the 
+Given a table defining a given patchwork contig (generally the
 output of patchwork_bins(boundaries_only=TRUE)), define a Y-axis and breaks
 which are more descriptive of distance between points on the X-axis.
 }

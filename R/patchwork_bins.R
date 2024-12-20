@@ -9,7 +9,7 @@
 #' each segment is indicated by its range's strand ("-" indicates 3' to 5'
 #' direction).
 #'
-#' @param gr_list List of GRanges to combine.
+#' @param gr_list List of GRanges to combine. Can also be a single GRanges vector.
 #' @param hic_file Cooler filename from which to retrieve bins.
 #' @param boundaries_only Defaults to TRUE, in which case only bins which bound each segment are retrived. If FALSE, all bins are retrieved.
 #' @param disable_file_lock Should the locking of HDF5 files be disabled? Defaults to FALSE, but can be set to TRUE if multiple instances will be accessing the same Cooler simultaneously.
@@ -29,7 +29,11 @@ patchwork_bins    <- function(gr_list,hic_file,boundaries_only=TRUE,disable_file
   arrange <- dplyr::arrange
 
   if(inherits(gr_list,"GRanges")){
-    gr_list$region <- paste0("reg",c(1:length(gr_list)))
+    if(is.null(names(gr_list))){
+      gr_list$region <- paste0("reg",c(1:length(gr_list)))
+    }else{
+      gr_list$region <- names(gr_list)
+    }
     gr_list <- split(gr_list,gr_list$region)
   }
   tb_bins <- read_cooler_bins_hdf5(file_cooler = hic_file,granges_list = gr_list,disable_file_lock=disable_file_lock) %>% as_tibble
@@ -40,8 +44,8 @@ patchwork_bins    <- function(gr_list,hic_file,boundaries_only=TRUE,disable_file
     filter(binx <= biny) #Only take upper triangle.
 
   tb_out  <-
-    cbind(as_tibble(tb_bins[bin_ids$binx,]) %>% select(-width) %>% rename_all(paste0,"1"),
-          as_tibble(tb_bins[bin_ids$biny,]) %>% select(-width) %>% rename_all(paste0,"2")) %>%
+    cbind(as_tibble(tb_bins[bin_ids$binx+1,]) %>% select(-width) %>% rename_all(paste0,"1"),
+          as_tibble(tb_bins[bin_ids$biny+1,]) %>% select(-width) %>% rename_all(paste0,"2")) %>%
     as_tibble %>%
     mutate(trans_region = region1 != region2,
            region = ifelse(!trans_region,region1,paste0(region1,"-",region2))) %>%

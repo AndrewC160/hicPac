@@ -12,7 +12,7 @@ patchwork_bins(
 )
 }
 \arguments{
-\item{gr_list}{List of GRanges to combine.}
+\item{gr_list}{List of GRanges to combine. Can also be a single GRanges vector.}
 
 \item{hic_file}{Cooler filename from which to retrieve bins.}
 

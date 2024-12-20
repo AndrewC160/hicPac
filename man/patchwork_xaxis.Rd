@@ -4,10 +4,21 @@
 \alias{patchwork_xaxis}
 \title{Patchwork X-axis}
 \usage{
-patchwork_xaxis(tb_region)
+patchwork_xaxis(
+  tb_region,
+  simplify_labels = FALSE,
+  simplify_digits = 3,
+  invert_junction_labels = FALSE
+)
 }
 \arguments{
 \item{tb_region}{Table defining the regions of the contig, generally the output of patchwork_bins(boundaries_only=TRUE).}
+
+\item{simplify_labels}{Should genome coordinates be simplified into basepair units (i.e. 15,000,000 becomes 15MB)? Defaults to FALSE.}
+
+\item{simplify_digits}{If <simplify_labels> is TRUE, how many digits should be used when rounding? Defaults to 3.}
+
+\item{invert_junction_labels}{Boolean; should junction labels be reversed? Useful if axis will be used for Y-axis. Defaults to FALSE.}
 }
 \description{
 Given a table defining a given patchwork contig (generally the
