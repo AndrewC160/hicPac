@@ -14,8 +14,9 @@ reflect_pixel_matrix(tb_pix_in, drop_diagonal = FALSE)
 \description{
 Reflect a (non-rotated) pixel matrix across the diagonal (i.e. swap columns
 with start/end/seqnames values). Note that the only columns that are swapped
-are the seqnames, start, end, start_adj, end_adj, and bin1/bin2 id columns.
-Others will need to be swapped manually, for instance via:
+are the seqnames, start, end, start_adj, end_adj, and bin1/bin2 columns (If
+present in the data, bin_alt1/2 columns will be swapped as well). Others will
+need to be swapped manually, for instance via:
 
 swap_columns(tb_pix,"column1","column2")
 
