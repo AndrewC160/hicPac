@@ -22,8 +22,8 @@ patchwork_annotations_2d(
 \item{granges_in}{GenomicRanges object containing annotations to transform.}
 }
 \description{
-Given a GenomicRanges object of genome annotations representing 
-two coordinates in a patchwork (for example, a translocation), and a region 
+Given a GenomicRanges object of genome annotations representing
+two coordinates in a patchwork (for example, a translocation), and a region
 table from patchwork_bins(boundaries_only=TRUE), subset and clip the contents
 of these ranges to identify features which fall within the matrix.
 

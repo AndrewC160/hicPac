@@ -2,6 +2,9 @@
 #' Read Cooler HDF5
 #'
 #' @description
+#'
+#' NOTE: Discontinue; replace with read_cooler_hdf5_mc().
+#'
 #' Read .cool files as HDF5 using the R package rhdf5. If multiple files are
 #' provided, function is run recursively on each and the results are
 #' bound into a single table with a "cooler" column. Does not load entire cool
@@ -53,7 +56,7 @@
 #'
 #' @export
 
-read_cooler_hdf5  <- function(file_cool,gr_range1=NULL,gr_range2=NULL,diag_distance=NULL,silent=TRUE,max_pixels=6.25e6,cache_tsv=NULL,overwrite_cache = FALSE,return_table=TRUE,disable_file_lock=FALSE){
+read_cooler_hdf5  <- function(file_cool,gr_range1=NULL,gr_range2=NULL,diag_distance=NULL,silent=TRUE,max_pixels=6.25e6,cache_tsv=NULL,overwrite_cache = FALSE,return_table=TRUE,pixel_types="all",disable_file_lock=FALSE){
   mutate  <- dplyr::mutate
   arrange <- dplyr::arrange
   filter  <- dplyr::filter
@@ -98,8 +101,7 @@ read_cooler_hdf5  <- function(file_cool,gr_range1=NULL,gr_range2=NULL,diag_dista
                                   disable_file_lock = disable_file_lock,
                                   cache_tsv=NULL) %>%
           mutate(cooler=fl_nm)
-      })# %>%
-      #do.call(rbind,.)
+      })
 
       fix_col_names   <- function(pix_tbl,col_names_req=col_nms){
         # Make sure that all retrieved pixel files have all columns (and in the same order).
@@ -135,7 +137,6 @@ read_cooler_hdf5  <- function(file_cool,gr_range1=NULL,gr_range2=NULL,diag_dista
         gr1   <- resize(gr_range1,width = width(gr_range1) + 2 * diag_distance,fix = "center")
       }else{
         gr1   <- gr_range1
-        #diag_distance <- Inf
       }
       # NOTE: Add one bin to the end of the x-bins list otherwise last row will happen at the start of the last bin.
       xbins<- subsetByOverlaps(gr_bins,gr1,minoverlap = 1L)$bin_id
@@ -162,10 +163,6 @@ read_cooler_hdf5  <- function(file_cool,gr_range1=NULL,gr_range2=NULL,diag_dista
     }) %>%
       do.call(rbind,.) %>%
       swap_columns("binx","biny",function(x,y) x>y)
-      # mutate(flip_x = ifelse(biny < binx,biny,NA),
-      #        flip_y = ifelse(biny < binx,binx,NA)) %>%
-      # mutate(binx = ifelse(is.na(flip_x),binx,flip_x),
-      #        biny = ifelse(is.na(flip_y),biny,flip_y))
     xbins   <- select(bin_tb,binx) %>% unlist %>% unique
     ybins   <- select(bin_tb,biny) %>% unlist %>% unique
 

@@ -14,6 +14,7 @@ read_cooler_hdf5(
   cache_tsv = NULL,
   overwrite_cache = FALSE,
   return_table = TRUE,
+  pixel_types = "all",
   disable_file_lock = FALSE
 )
 }
@@ -39,6 +40,8 @@ read_cooler_hdf5(
 \item{cache_table}{Filename of TSV to cache pixel results into. If provided and this file exists, this table will be read and returned. If not found, it will be created.}
 }
 \description{
+NOTE: Discontinue; replace with read_cooler_hdf5_mc().
+
 Read .cool files as HDF5 using the R package rhdf5. If multiple files are
 provided, function is run recursively on each and the results are
 bound into a single table with a "cooler" column. Does not load entire cool
